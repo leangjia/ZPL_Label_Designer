@@ -131,13 +131,19 @@ class GraphicsTextItem(QGraphicsTextItem):
         """Отслеживание изменений позиции с snap to grid"""
         # SNAP TO GRID - при движении
         if change == QGraphicsItem.ItemPositionChange:
+            new_pos = value
+            
+            # Конвертувати у мм
+            x_mm = self._px_to_mm(new_pos.x())
+            y_mm = self._px_to_mm(new_pos.y())
+            
+            # EMIT cursor position для rulers при drag
+            if self.canvas:
+                from utils.logger import logger
+                logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
+                self.canvas.cursor_position_changed.emit(x_mm, y_mm)
+            
             if self.snap_enabled:
-                new_pos = value
-                
-                # Конвертувати у мм
-                x_mm = self._px_to_mm(new_pos.x())
-                y_mm = self._px_to_mm(new_pos.y())
-                
                 # Snap до сітки (окремо для X та Y)
                 snapped_x = self._snap_to_grid(x_mm, 'x')
                 snapped_y = self._snap_to_grid(y_mm, 'y')
@@ -154,6 +160,8 @@ class GraphicsTextItem(QGraphicsTextItem):
                 )
                 
                 return snapped_pos
+            
+            return new_pos
         
         # ОБНОВЛЕНИЕ ЭЛЕМЕНТА - после движения
         if change == QGraphicsTextItem.ItemPositionHasChanged:

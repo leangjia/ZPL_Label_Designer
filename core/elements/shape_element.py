@@ -317,24 +317,32 @@ class GraphicsRectangleItem(QGraphicsRectItem):
     
     def itemChange(self, change, value):
         """Перевизначити для snap to grid"""
-        if change == QGraphicsItem.ItemPositionChange and self.snap_enabled:
+        if change == QGraphicsItem.ItemPositionChange:
             new_pos = value
             
             # Конвертувати у мм
             x_mm = self._px_to_mm(new_pos.x())
             y_mm = self._px_to_mm(new_pos.y())
             
-            # Snap до сітки
-            snapped_x = self._snap_to_grid(x_mm)
-            snapped_y = self._snap_to_grid(y_mm)
+            # EMIT cursor position для rulers при drag
+            if self.canvas:
+                logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
+                self.canvas.cursor_position_changed.emit(x_mm, y_mm)
             
-            # Конвертувати назад у пікселі
-            snapped_pos = QPointF(
-                self._mm_to_px(snapped_x),
-                self._mm_to_px(snapped_y)
-            )
+            if self.snap_enabled:
+                # Snap до сітки
+                snapped_x = self._snap_to_grid(x_mm)
+                snapped_y = self._snap_to_grid(y_mm)
+                
+                # Конвертувати назад у пікселі
+                snapped_pos = QPointF(
+                    self._mm_to_px(snapped_x),
+                    self._mm_to_px(snapped_y)
+                )
+                
+                return snapped_pos
             
-            return snapped_pos
+            return new_pos
         
         elif change == QGraphicsItem.ItemPositionHasChanged:
             # Оновити config після переміщення
@@ -431,21 +439,29 @@ class GraphicsCircleItem(QGraphicsEllipseItem):
     
     def itemChange(self, change, value):
         """Перевизначити для snap to grid - аналогічно Rectangle"""
-        if change == QGraphicsItem.ItemPositionChange and self.snap_enabled:
+        if change == QGraphicsItem.ItemPositionChange:
             new_pos = value
             
             x_mm = self._px_to_mm(new_pos.x())
             y_mm = self._px_to_mm(new_pos.y())
             
-            snapped_x = self._snap_to_grid(x_mm)
-            snapped_y = self._snap_to_grid(y_mm)
+            # EMIT cursor position для rulers при drag
+            if self.canvas:
+                logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
+                self.canvas.cursor_position_changed.emit(x_mm, y_mm)
             
-            snapped_pos = QPointF(
-                self._mm_to_px(snapped_x),
-                self._mm_to_px(snapped_y)
-            )
+            if self.snap_enabled:
+                snapped_x = self._snap_to_grid(x_mm)
+                snapped_y = self._snap_to_grid(y_mm)
+                
+                snapped_pos = QPointF(
+                    self._mm_to_px(snapped_x),
+                    self._mm_to_px(snapped_y)
+                )
+                
+                return snapped_pos
             
-            return snapped_pos
+            return new_pos
         
         elif change == QGraphicsItem.ItemPositionHasChanged:
             x_mm = self._px_to_mm(self.pos().x())
@@ -532,7 +548,7 @@ class GraphicsLineItem(QGraphicsLineItem):
     
     def itemChange(self, change, value):
         """Перевизначити для snap to grid"""
-        if change == QGraphicsItem.ItemPositionChange and self.snap_enabled:
+        if change == QGraphicsItem.ItemPositionChange:
             # Line має складнішу логіку snap - snap обох кінців
             # Тут спрощена версія - snap тільки start point
             new_pos = value
@@ -540,15 +556,23 @@ class GraphicsLineItem(QGraphicsLineItem):
             x_mm = self._px_to_mm(new_pos.x())
             y_mm = self._px_to_mm(new_pos.y())
             
-            snapped_x = self._snap_to_grid(x_mm)
-            snapped_y = self._snap_to_grid(y_mm)
+            # EMIT cursor position для rulers при drag
+            if self.canvas:
+                logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
+                self.canvas.cursor_position_changed.emit(x_mm, y_mm)
             
-            snapped_pos = QPointF(
-                self._mm_to_px(snapped_x),
-                self._mm_to_px(snapped_y)
-            )
+            if self.snap_enabled:
+                snapped_x = self._snap_to_grid(x_mm)
+                snapped_y = self._snap_to_grid(y_mm)
+                
+                snapped_pos = QPointF(
+                    self._mm_to_px(snapped_x),
+                    self._mm_to_px(snapped_y)
+                )
+                
+                return snapped_pos
             
-            return snapped_pos
+            return new_pos
         
         elif change == QGraphicsItem.ItemPositionHasChanged:
             # Оновити config після переміщення

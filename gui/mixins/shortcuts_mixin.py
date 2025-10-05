@@ -62,9 +62,20 @@ class ShortcutsMixin:
         underline_toggle = QShortcut(QKeySequence("Ctrl+U"), self)
         underline_toggle.activated.connect(self._toggle_underline)
         
+        # Delete shortcut
+        delete_shortcut = QShortcut(QKeySequence(Qt.Key_Delete), self)
+        delete_shortcut.activated.connect(self._delete_selected)
+        logger.debug("[SHORTCUT] Delete shortcut created")
+        
+        # Backspace shortcut
+        backspace_shortcut = QShortcut(QKeySequence(Qt.Key_Backspace), self)
+        backspace_shortcut.activated.connect(self._delete_selected)
+        logger.debug("[SHORTCUT] Backspace shortcut created")
+        
         logger.debug("Zoom shortcuts: Ctrl+Plus, Ctrl+Minus, Ctrl+0")
         logger.debug("Grid visibility shortcut: Ctrl+Shift+G")
         logger.debug("Snap shortcut: Ctrl+G")
+        logger.debug("Delete shortcuts: Delete, Backspace")
     
     def _toggle_guides(self, state):
         """Перемикач smart guides"""

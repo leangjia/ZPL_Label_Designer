@@ -268,26 +268,34 @@ class GraphicsImageItem(QGraphicsPixmapItem):
     
     def itemChange(self, change, value):
         """Обробка змін item (snap to grid, position updates)"""
-        if change == QGraphicsItem.ItemPositionChange and self.snap_enabled:
+        if change == QGraphicsItem.ItemPositionChange:
             new_pos = value
             
             # Конвертувати у мм
             x_mm = self._px_to_mm(new_pos.x())
             y_mm = self._px_to_mm(new_pos.y())
             
-            # Snap до сітки
-            snapped_x = self._snap_to_grid(x_mm)
-            snapped_y = self._snap_to_grid(y_mm)
+            # EMIT cursor position для rulers при drag
+            if self.canvas:
+                logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
+                self.canvas.cursor_position_changed.emit(x_mm, y_mm)
             
-            logger.debug(f"[IMAGE-SNAP] ({x_mm:.2f}, {y_mm:.2f})mm -> ({snapped_x:.2f}, {snapped_y:.2f})mm")
+            if self.snap_enabled:
+                # Snap до сітки
+                snapped_x = self._snap_to_grid(x_mm)
+                snapped_y = self._snap_to_grid(y_mm)
+                
+                logger.debug(f"[IMAGE-SNAP] ({x_mm:.2f}, {y_mm:.2f})mm -> ({snapped_x:.2f}, {snapped_y:.2f})mm")
+                
+                # Конвертувати назад у пікселі
+                snapped_pos = QPointF(
+                    self._mm_to_px(snapped_x),
+                    self._mm_to_px(snapped_y)
+                )
+                
+                return snapped_pos
             
-            # Конвертувати назад у пікселі
-            snapped_pos = QPointF(
-                self._mm_to_px(snapped_x),
-                self._mm_to_px(snapped_y)
-            )
-            
-            return snapped_pos
+            return new_pos
         
         elif change == QGraphicsItem.ItemPositionHasChanged:
             # Оновити config після переміщення

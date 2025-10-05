@@ -76,6 +76,44 @@ class SelectionMixin:
         tooltip_text = f"X: {x_mm:.1f} mm\nY: {y_mm:.1f} mm"
         QToolTip.showText(QCursor.pos(), tooltip_text)
     
+    def _delete_selected(self):
+        """Видалити обраний елемент або групу елементів"""
+        # Отримати ВСІ виділені items
+        selected = self.canvas.scene.selectedItems()
+        
+        if not selected:
+            logger.debug("[DELETE] No items selected")
+            return
+        
+        logger.debug(f"[DELETE] Deleting {len(selected)} item(s)")
+        
+        # CRITICAL: Зберегти список ПЕРЕД removeItem!
+        # removeItem() викликає selectionChanged який змінює selected
+        items_to_delete = []
+        for item in selected:
+            if hasattr(item, 'element'):
+                items_to_delete.append((item, item.element))
+                logger.debug(f"[DELETE] Marked: {item.__class__.__name__} at ({item.element.config.x:.2f}, {item.element.config.y:.2f})mm")
+        
+        # Видалити ВСІ items
+        for item, element in items_to_delete:
+            # removeItem викликає selectionChanged
+            self.canvas.scene.removeItem(item)
+            
+            # Використовуємо збережені змінні!
+            if element in self.elements:
+                self.elements.remove(element)
+                logger.debug(f"[DELETE] Removed element from list")
+            
+            if item in self.graphics_items:
+                self.graphics_items.remove(item)
+                logger.debug(f"[DELETE] Removed graphics item from list")
+        
+        # Очистити PropertyPanel
+        self.property_panel.set_element(None, None)
+        
+        logger.info(f"Deleted {len(items_to_delete)} element(s). Remaining: {len(self.elements)}")
+    
     def eventFilter(self, obj, event):
         """Обробка подій canvas та scene"""
         if obj == self.canvas.viewport():
