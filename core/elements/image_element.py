@@ -206,7 +206,7 @@ class GraphicsImageItem(QGraphicsPixmapItem):
         
         # Snap to grid - КРИТИЧНО: створити ПЕРЕД setPos()!
         self.snap_enabled = True
-        self.grid_step_mm = 2.0
+        self.grid_step_mm = 1.0
         self.snap_threshold_mm = 1.0
         
         # Завантажити зображення

@@ -86,7 +86,7 @@ class GraphicsBarcodeItem(QGraphicsRectItem):
         
         # Snap to grid - КРИТИЧНО: створити ПЕРЕД setPos()!
         self.snap_enabled = True
-        self.grid_step_mm = 2.0
+        self.grid_step_mm = 1.0
         self.snap_threshold_mm = 1.0  # grid_step / 2 для правильного snap
         
         # Установить позицию (викликає itemChange)
@@ -178,8 +178,8 @@ class GraphicsBarcodeItem(QGraphicsRectItem):
         
         # Fallback для старих елементів без canvas
         if not self.canvas:
-            logger.debug(f"[SNAP-FALLBACK] Using default: size=2.0mm, offset=0.0mm")
-            size = 2.0
+            logger.debug(f"[SNAP-FALLBACK] Using default: size=1.0mm, offset=0.0mm")
+            size = 1.0
             offset = 0.0
             threshold = 1.0
         else:

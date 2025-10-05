@@ -274,7 +274,7 @@ class GraphicsRectangleItem(QGraphicsRectItem):
         
         # КРИТИЧНО: створити ПЕРЕД setPos()!
         self.snap_enabled = True
-        self.grid_step_mm = 2.0
+        self.grid_step_mm = 1.0
         self.snap_threshold_mm = 1.0
         
         # Встановити розмір
@@ -418,7 +418,7 @@ class GraphicsCircleItem(QGraphicsEllipseItem):
         
         # КРИТИЧНО: створити ПЕРЕД setPos()!
         self.snap_enabled = True
-        self.grid_step_mm = 2.0
+        self.grid_step_mm = 1.0
         self.snap_threshold_mm = 1.0
         
         # Встановити розмір (еліпс)
@@ -558,7 +558,7 @@ class GraphicsLineItem(QGraphicsLineItem):
         
         # КРИТИЧНО: створити ПЕРЕД setPos()!
         self.snap_enabled = True
-        self.grid_step_mm = 2.0
+        self.grid_step_mm = 1.0
         self.snap_threshold_mm = 1.0
         
         # Встановити лінію

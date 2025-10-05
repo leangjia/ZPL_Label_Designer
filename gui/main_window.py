@@ -23,7 +23,8 @@ from core.template_manager import TemplateManager
 from zpl.generator import ZPLGenerator
 from integration.labelary_client import LabelaryClient
 from utils.logger import logger
-from utils.unit_converter import MeasurementUnit
+from utils.unit_converter import MeasurementUnit, UnitConverter
+from utils.settings_manager import settings_manager
 from config import DEFAULT_UNIT
 
 
@@ -60,9 +61,13 @@ class MainWindow(QMainWindow,
         self.template_manager = TemplateManager()
         logger.info("ZPL Generator, Labelary Client and Template Manager created")
         
+        toolbar_settings = settings_manager.load_toolbar_settings()
+        label_width_mm = toolbar_settings['label_width']
+        label_height_mm = toolbar_settings['label_height']
+
         # Canvas
-        self.canvas = CanvasView(width_mm=28, height_mm=28, dpi=203)
-        logger.info("Canvas created (28x28mm, DPI 203)")
+        self.canvas = CanvasView(width_mm=label_width_mm, height_mm=label_height_mm, dpi=203)
+        logger.info(f"Canvas created ({label_width_mm}x{label_height_mm}mm, DPI 203)")
         self.canvas.bounds_update_callback = self._highlight_element_bounds
         
         # Sidebar
@@ -71,8 +76,9 @@ class MainWindow(QMainWindow,
         
         # Smart Guides
         self.smart_guides = SmartGuides(self.canvas.scene)
-        self.guides_enabled = True
-        logger.info("Smart Guides initialized")
+        self.guides_enabled = toolbar_settings['smart_guides']
+        self.smart_guides.set_enabled(self.guides_enabled)
+        logger.info(f"Smart Guides initialized (enabled={self.guides_enabled})")
         
         # Undo/Redo Stack
         self.undo_stack = QUndoStack(self)
@@ -123,10 +129,15 @@ class MainWindow(QMainWindow,
         logger.info("Property panel created")
         
         # Snap to grid
-        self.snap_enabled = True
-        
+        self.snap_enabled = toolbar_settings['snap_to_grid']
+
         # Current display unit
-        self.current_unit = DEFAULT_UNIT
+        unit_value = toolbar_settings['unit']
+        try:
+            self.current_unit = MeasurementUnit(unit_value)
+        except ValueError:
+            logger.warning(f"[TOOLBAR-PERSIST] Unknown unit '{unit_value}', fallback to {DEFAULT_UNIT.value}")
+            self.current_unit = DEFAULT_UNIT
         
         # Connect signals
         self._connect_signals()
@@ -135,6 +146,7 @@ class MainWindow(QMainWindow,
         self._create_snap_toggle()
         self._create_label_size_controls()
         self._create_units_controls()
+        self._apply_persisted_toolbar_settings(toolbar_settings)
         
         # Setup shortcuts
         self._setup_shortcuts()
@@ -283,6 +295,97 @@ class MainWindow(QMainWindow,
 
         view_menu = menubar.addMenu("View")
         view_menu.addAction(self.actions['grid_settings'])
+
+    def _apply_persisted_toolbar_settings(self, toolbar_settings):
+        """Застосувати налаштування toolbar, збережені між сесіями"""
+
+        show_grid = toolbar_settings['show_grid']
+        snap_to_grid = toolbar_settings['snap_to_grid']
+        smart_guides = toolbar_settings['smart_guides']
+        saved_unit = self.current_unit
+
+        if isinstance(toolbar_settings.get('unit'), str):
+            try:
+                saved_unit = MeasurementUnit(toolbar_settings['unit'])
+            except ValueError:
+                logger.warning(
+                    f"[TOOLBAR-PERSIST] Invalid unit '{toolbar_settings['unit']}',"
+                    f" fallback to {self.current_unit.value}"
+                )
+                saved_unit = self.current_unit
+
+        # Apply Show Grid state
+        if hasattr(self, 'grid_checkbox'):
+            self.grid_checkbox.blockSignals(True)
+            self.grid_checkbox.setChecked(show_grid)
+            self.grid_checkbox.blockSignals(False)
+            self._toggle_grid_visibility(Qt.Checked if show_grid else Qt.Unchecked)
+
+        # Apply Snap to Grid state
+        if hasattr(self, 'snap_checkbox'):
+            self.snap_checkbox.blockSignals(True)
+            self.snap_checkbox.setChecked(snap_to_grid)
+            self.snap_checkbox.blockSignals(False)
+            self._toggle_snap(Qt.Checked if snap_to_grid else Qt.Unchecked)
+
+        # Apply Smart Guides state
+        if hasattr(self, 'guides_checkbox'):
+            self.guides_checkbox.blockSignals(True)
+            self.guides_checkbox.setChecked(smart_guides)
+            self.guides_checkbox.blockSignals(False)
+            self._toggle_guides(Qt.Checked if smart_guides else Qt.Unchecked)
+
+        # Apply label size values in current unit
+        width_mm = toolbar_settings['label_width']
+        height_mm = toolbar_settings['label_height']
+
+        if hasattr(self, 'width_spinbox') and hasattr(self, 'height_spinbox'):
+            if saved_unit != MeasurementUnit.MM:
+                width_value = UnitConverter.mm_to_unit(width_mm, saved_unit)
+                height_value = UnitConverter.mm_to_unit(height_mm, saved_unit)
+            else:
+                width_value = width_mm
+                height_value = height_mm
+
+            self.width_spinbox.blockSignals(True)
+            self.height_spinbox.blockSignals(True)
+            self.width_spinbox.setValue(width_value)
+            self.height_spinbox.setValue(height_value)
+            self.width_spinbox.blockSignals(False)
+            self.height_spinbox.blockSignals(False)
+
+        # Apply unit selection (updates spinboxes/rulers via _on_unit_changed)
+        if hasattr(self, 'units_combobox'):
+            index = self.units_combobox.findData(saved_unit)
+            if index != -1:
+                self.units_combobox.blockSignals(True)
+                self.units_combobox.setCurrentIndex(index)
+                self.units_combobox.blockSignals(False)
+
+                # Ensure old unit passed correctly to _on_unit_changed
+                previous_unit = self.current_unit
+                if previous_unit != saved_unit:
+                    self.current_unit = previous_unit
+                    self._on_unit_changed(index)
+                else:
+                    # Units already match, but we still want suffix updates
+                    self._update_label_size_spinboxes(saved_unit, saved_unit)
+
+        # Sync canvas label size with persisted values
+        if hasattr(self, 'canvas'):
+            if abs(self.canvas.width_mm - width_mm) > 0.001 or abs(self.canvas.height_mm - height_mm) > 0.001:
+                self.canvas.set_label_size(width_mm, height_mm)
+
+        settings_manager.save_toolbar_settings(
+            {
+                'show_grid': show_grid,
+                'snap_to_grid': snap_to_grid,
+                'smart_guides': smart_guides,
+                'label_width': width_mm,
+                'label_height': height_mm,
+                'unit': saved_unit.value,
+            }
+        )
     
     def _on_sidebar_element_selected(self, element_type: str):
         """

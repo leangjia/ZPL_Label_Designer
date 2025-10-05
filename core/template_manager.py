@@ -56,8 +56,8 @@ class TemplateManager:
                 "dpi": label_config.get('dpi', 203),
                 "display_unit": display_unit.value,  # ← зберегти як string
                 "grid": label_config.get('grid', {
-                    'size_x_mm': 2.0,
-                    'size_y_mm': 2.0,
+                    'size_x_mm': 1.0,
+                    'size_y_mm': 1.0,
                     'offset_x_mm': 0.0,
                     'offset_y_mm': 0.0,
                     'visible': True,

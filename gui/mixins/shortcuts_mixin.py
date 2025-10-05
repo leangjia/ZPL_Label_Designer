@@ -82,6 +82,8 @@ class ShortcutsMixin:
         self.guides_enabled = (state == 2)
         self.smart_guides.set_enabled(self.guides_enabled)
         logger.debug(f"[GUIDES-TOGGLE] Enabled: {self.guides_enabled}")
+        if hasattr(self, "_persist_toolbar_settings"):
+            self._persist_toolbar_settings()
     
     def _create_snap_toggle(self):
         """Створити toggle для відображення сітки, snap і smart guides"""
@@ -123,12 +125,8 @@ class ShortcutsMixin:
         else:
             logger.warning("Canvas does not support set_grid_visible")
 
-        # Persist state if відповідні налаштування існують
-        if hasattr(self, "settings"):
-            if isinstance(self.settings, dict):
-                self.settings["show_grid"] = self.grid_visible
-            elif hasattr(self.settings, "setValue"):
-                self.settings.setValue("show_grid", self.grid_visible)
+        if hasattr(self, "_persist_toolbar_settings"):
+            self._persist_toolbar_settings()
     
     def _toggle_snap(self, state):
         """Увімкнути/вимкнути snap"""
@@ -139,8 +137,10 @@ class ShortcutsMixin:
         for item in self.graphics_items:
             if hasattr(item, 'snap_enabled'):
                 item.snap_enabled = self.snap_enabled
-        
+
         logger.info(f"Snap to Grid: {'ON' if self.snap_enabled else 'OFF'} (items: {len(self.graphics_items)})")
+        if hasattr(self, "_persist_toolbar_settings"):
+            self._persist_toolbar_settings()
     
     def _toggle_bold(self):
         """Включить/выключить Bold для selected element"""

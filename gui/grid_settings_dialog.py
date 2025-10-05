@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
                                 QPushButton, QGroupBox, QLabel)
 from PySide6.QtCore import Qt
 from utils.logger import logger
+from utils.settings_manager import settings_manager
 from config import GridConfig, SnapMode
 
 class GridSettingsDialog(QDialog):
@@ -101,17 +102,21 @@ class GridSettingsDialog(QDialog):
     
     def _load_config(self):
         """Завантажити config у UI"""
-        self.size_x_spin.setValue(self.grid_config.size_x_mm)
-        self.size_y_spin.setValue(self.grid_config.size_y_mm)
-        self.offset_x_spin.setValue(self.grid_config.offset_x_mm)
-        self.offset_y_spin.setValue(self.grid_config.offset_y_mm)
-        self.display_checkbox.setChecked(self.grid_config.visible)
-        
+        saved = settings_manager.load_grid_settings()
+
+        self.size_x_spin.setValue(saved["size_x"])
+        self.size_y_spin.setValue(saved["size_y"])
+        self.offset_x_spin.setValue(saved["offset_x"])
+        self.offset_y_spin.setValue(saved["offset_y"])
+        self.display_checkbox.setChecked(saved["show_gridlines"])
+
         # Snap mode
         for i in range(self.snap_combo.count()):
-            if self.snap_combo.itemData(i) == self.grid_config.snap_mode:
+            if self.snap_combo.itemData(i) == saved["snap_mode"]:
                 self.snap_combo.setCurrentIndex(i)
                 break
+
+        logger.debug(f"[GRID-DIALOG] Loaded saved settings: {saved}")
     
     def get_config(self) -> GridConfig:
         """Отримати GridConfig з UI"""
@@ -127,5 +132,26 @@ class GridSettingsDialog(QDialog):
         logger.debug(f"[GRID-DIALOG] User set: Size X={config.size_x_mm}mm, Y={config.size_y_mm}mm")
         logger.debug(f"[GRID-DIALOG] User set: Offset X={config.offset_x_mm}mm, Y={config.offset_y_mm}mm")
         logger.debug(f"[GRID-DIALOG] User set: Snap mode={config.snap_mode.value}")
-        
+
         return config
+
+    def accept(self):
+        """Підтвердити зміни та зберегти їх"""
+
+        current_config = self.get_config()
+        settings_manager.save_grid_settings(
+            {
+                "size_x": current_config.size_x_mm,
+                "size_y": current_config.size_y_mm,
+                "offset_x": current_config.offset_x_mm,
+                "offset_y": current_config.offset_y_mm,
+                "show_gridlines": current_config.visible,
+                "snap_mode": current_config.snap_mode,
+            }
+        )
+        logger.debug(
+            "[GRID-DIALOG] Settings saved on OK: "
+            f"{current_config.size_x_mm}x{current_config.size_y_mm}mm"
+        )
+
+        super().accept()
