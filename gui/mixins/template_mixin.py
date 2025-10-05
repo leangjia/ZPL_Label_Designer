@@ -147,6 +147,27 @@ class TemplateMixin:
         try:
             template_data = self.template_manager.load_template(filepath)
             
+            # Apply grid config (зворотна сумісність)
+            label_config = template_data['label_config']
+            if 'grid' in label_config:
+                from config import GridConfig, SnapMode
+                grid_data = label_config['grid']
+                grid_config = GridConfig(
+                    size_x_mm=grid_data.get('size_x_mm', 2.0),
+                    size_y_mm=grid_data.get('size_y_mm', 2.0),
+                    offset_x_mm=grid_data.get('offset_x_mm', 0.0),
+                    offset_y_mm=grid_data.get('offset_y_mm', 0.0),
+                    visible=grid_data.get('visible', True),
+                    snap_mode=SnapMode(grid_data.get('snap_mode', 'grid'))
+                )
+                self.canvas.set_grid_config(grid_config)
+                logger.debug(f"[TEMPLATE-LOAD] Loaded grid: Size X={grid_config.size_x_mm}mm, Offset Y={grid_config.offset_y_mm}mm")
+            else:
+                # Старі template без grid - defaults
+                logger.debug("[TEMPLATE-LOAD] No grid config - using defaults")
+                from config import GridConfig
+                self.canvas.set_grid_config(GridConfig())
+            
             self.canvas.clear_and_redraw_grid()
             self.elements.clear()
             self.graphics_items.clear()

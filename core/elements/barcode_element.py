@@ -63,7 +63,7 @@ class BarcodeElement(BaseElement):
 class GraphicsBarcodeItem(QGraphicsRectItem):
     """Графический элемент штрихкода"""
     
-    def __init__(self, element: BarcodeElement, dpi=203):
+    def __init__(self, element: BarcodeElement, dpi=203, canvas=None):
         width_px = int(element.width * dpi / 25.4)
         height_px = int(element.height * dpi / 25.4)
         
@@ -71,6 +71,7 @@ class GraphicsBarcodeItem(QGraphicsRectItem):
         
         self.element = element
         self.dpi = dpi
+        self.canvas = canvas  # Посилання на canvas для GridConfig
         
         self.setFlag(QGraphicsRectItem.ItemIsMovable)
         self.setFlag(QGraphicsRectItem.ItemIsSelectable)
@@ -107,9 +108,9 @@ class GraphicsBarcodeItem(QGraphicsRectItem):
             x_mm = self._px_to_mm(new_pos.x())
             y_mm = self._px_to_mm(new_pos.y())
             
-            # Snap до сітки
-            snapped_x = self._snap_to_grid(x_mm)
-            snapped_y = self._snap_to_grid(y_mm)
+            # Snap до сітки (окремо для X та Y)
+            snapped_x = self._snap_to_grid(x_mm, 'x')
+            snapped_y = self._snap_to_grid(y_mm, 'y')
             
             # Конвертувати назад у пікселі
             snapped_pos = QPointF(
@@ -135,15 +136,42 @@ class GraphicsBarcodeItem(QGraphicsRectItem):
         
         return super().itemChange(change, value)
     
-    def _snap_to_grid(self, value_mm):
-        """Прив'язка до сітки"""
-        # Знайти найближчу grid line
-        nearest = round(value_mm / self.grid_step_mm) * self.grid_step_mm
+    def _snap_to_grid(self, value_mm, axis='x'):
+        """Прив'язка до сітки з GridConfig (size, offset)"""
+        from utils.logger import logger
+        from config import SnapMode
         
-        # Перевірити threshold
-        if abs(value_mm - nearest) <= self.snap_threshold_mm:
-            return nearest
+        # Fallback для старих елементів без canvas
+        if not self.canvas:
+            logger.debug(f"[SNAP-FALLBACK] Using default: size=2.0mm, offset=0.0mm")
+            size = 2.0
+            offset = 0.0
+            threshold = 1.0
+        else:
+            config = self.canvas.grid_config
+            
+            # Check snap mode
+            if config.snap_mode != SnapMode.GRID:
+                logger.debug(f"[SNAP] Mode={config.snap_mode.value}, skipping grid snap")
+                return value_mm
+            
+            size = config.size_x_mm if axis == 'x' else config.size_y_mm
+            offset = config.offset_x_mm if axis == 'x' else config.offset_y_mm
+            threshold = size / 2
+            
+            logger.debug(f"[SNAP-{axis.upper()}] Value: {value_mm:.2f}mm, Offset: {offset:.2f}mm, Size: {size:.2f}mm")
         
+        # Snap формула: nearest = offset + round((value - offset) / size) * size
+        relative = value_mm - offset
+        rounded = round(relative / size) * size + offset
+        
+        logger.debug(f"[SNAP-{axis.upper()}] Relative: {relative:.2f}mm, Rounded: {rounded:.2f}mm")
+        
+        if abs(value_mm - rounded) <= threshold:
+            logger.debug(f"[SNAP-{axis.upper()}] Result: {value_mm:.2f}mm -> {rounded:.2f}mm")
+            return rounded
+        
+        logger.debug(f"[SNAP-{axis.upper()}] No snap (distance > threshold)")
         return value_mm
     
     def update_size(self, width, height):

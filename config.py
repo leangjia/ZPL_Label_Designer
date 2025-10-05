@@ -1,6 +1,26 @@
 # -*- coding: utf-8 -*-
 """Конфігурація застосунку"""
 import os
+from enum import Enum
+from dataclasses import dataclass
+
+# === Grid Configuration ===
+
+class SnapMode(Enum):
+    """Режими вирівнювання елементів"""
+    GRID = 'grid'          # Align to Grid
+    OBJECTS = 'objects'    # Align to Objects
+    NONE = 'none'          # Do Not Align
+
+@dataclass
+class GridConfig:
+    """Конфігурація сітки (аналогічно ZebraDesigner 3)"""
+    size_x_mm: float = 2.0     # Grid Size X (крок по горизонталі)
+    size_y_mm: float = 2.0     # Grid Size Y (крок по вертикалі)
+    offset_x_mm: float = 0.0   # Grid Offset X (зсув початку сітки)
+    offset_y_mm: float = 0.0   # Grid Offset Y
+    visible: bool = True       # Display gridline guides
+    snap_mode: SnapMode = SnapMode.GRID  # Режим snap
 
 # Базові шляхи
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

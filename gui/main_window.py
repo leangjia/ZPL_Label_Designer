@@ -167,6 +167,7 @@ class MainWindow(QMainWindow,
         self.actions['load'].triggered.connect(self._load_template)
         self.actions['export'].triggered.connect(self._export_zpl)
         self.actions['preview'].triggered.connect(self._show_preview)
+        self.actions['grid_settings'].triggered.connect(self._show_grid_settings)
 
         logger.info("All signals connected")
 
@@ -206,6 +207,11 @@ class MainWindow(QMainWindow,
         preview_action.setShortcut(QKeySequence("Ctrl+P"))
         preview_action.setToolTip("Предпросмотр (Ctrl+P)")
         self.actions['preview'] = preview_action
+
+        # Grid Settings
+        grid_settings_action = QAction("Grid Settings...", self)
+        grid_settings_action.setToolTip("Налаштування сітки")
+        self.actions['grid_settings'] = grid_settings_action
 
         # Barcode group
         barcode_menu = QMenu("Add Barcode", self)
@@ -273,6 +279,9 @@ class MainWindow(QMainWindow,
         insert_menu.addMenu(self.menus['barcode'])
         insert_menu.addMenu(self.menus['shape'])
         insert_menu.addAction(self.actions['add_image'])
+
+        view_menu = menubar.addMenu("View")
+        view_menu.addAction(self.actions['grid_settings'])
     
     def _on_sidebar_element_selected(self, element_type: str):
         """
@@ -301,3 +310,15 @@ class MainWindow(QMainWindow,
             logger.warning(f"[SIDEBAR] Unknown element type: {element_type}")
         
         logger.debug(f"[SIDEBAR] Element {element_type} added successfully")
+    
+    def _show_grid_settings(self):
+        """Показати діалог налаштувань сітки"""
+        from gui.grid_settings_dialog import GridSettingsDialog
+        
+        dialog = GridSettingsDialog(self.canvas.grid_config, parent=self)
+        if dialog.exec():
+            new_config = dialog.get_config()
+            self.canvas.set_grid_config(new_config)
+            self.canvas._redraw_grid()
+            
+            logger.debug(f"[GRID-SETTINGS] Applied new config: {new_config}")

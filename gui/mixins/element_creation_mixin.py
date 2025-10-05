@@ -18,7 +18,7 @@ class ElementCreationMixin:
         config = ElementConfig(x=10, y=10)
         text_element = TextElement(config, "New Text", font_size=25)
         
-        graphics_item = GraphicsTextItem(text_element, dpi=self.canvas.dpi)
+        graphics_item = GraphicsTextItem(text_element, dpi=self.canvas.dpi, canvas=self.canvas)
         graphics_item.snap_enabled = self.snap_enabled
         
         command = AddElementCommand(self, text_element, graphics_item)
@@ -33,7 +33,7 @@ class ElementCreationMixin:
         config = ElementConfig(x=10, y=10)
         element = EAN13BarcodeElement(config, data='1234567890123', width=20, height=10)
         
-        graphics_item = GraphicsBarcodeItem(element, dpi=self.canvas.dpi)
+        graphics_item = GraphicsBarcodeItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
         graphics_item.snap_enabled = self.snap_enabled
         self.canvas.scene.addItem(graphics_item)
         
@@ -49,7 +49,7 @@ class ElementCreationMixin:
         config = ElementConfig(x=10, y=10)
         element = Code128BarcodeElement(config, data='SAMPLE128', width=30, height=10)
         
-        graphics_item = GraphicsBarcodeItem(element, dpi=self.canvas.dpi)
+        graphics_item = GraphicsBarcodeItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
         graphics_item.snap_enabled = self.snap_enabled
         self.canvas.scene.addItem(graphics_item)
         
@@ -65,7 +65,7 @@ class ElementCreationMixin:
         config = ElementConfig(x=10, y=10)
         element = QRCodeElement(config, data='https://example.com', size=15)
         
-        graphics_item = GraphicsBarcodeItem(element, dpi=self.canvas.dpi)
+        graphics_item = GraphicsBarcodeItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
         graphics_item.snap_enabled = self.snap_enabled
         self.canvas.scene.addItem(graphics_item)
         
@@ -81,7 +81,7 @@ class ElementCreationMixin:
         config = ShapeConfig(x=10, y=10, width=20, height=10, fill=False, border_thickness=2)
         element = RectangleElement(config)
         
-        graphics_item = GraphicsRectangleItem(element, dpi=self.canvas.dpi)
+        graphics_item = GraphicsRectangleItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
         graphics_item.snap_enabled = self.snap_enabled
         self.canvas.scene.addItem(graphics_item)
         
@@ -97,7 +97,7 @@ class ElementCreationMixin:
         config = ShapeConfig(x=10, y=10, width=15, height=15, fill=False, border_thickness=2)
         element = CircleElement(config)
         
-        graphics_item = GraphicsCircleItem(element, dpi=self.canvas.dpi)
+        graphics_item = GraphicsCircleItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
         graphics_item.snap_enabled = self.snap_enabled
         self.canvas.scene.addItem(graphics_item)
         
@@ -113,7 +113,7 @@ class ElementCreationMixin:
         config = LineConfig(x=10, y=10, x2=25, y2=20, thickness=2)
         element = LineElement(config)
         
-        graphics_item = GraphicsLineItem(element, dpi=self.canvas.dpi)
+        graphics_item = GraphicsLineItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
         graphics_item.snap_enabled = self.snap_enabled
         self.canvas.scene.addItem(graphics_item)
         
@@ -156,7 +156,7 @@ class ElementCreationMixin:
             )
             image_element = ImageElement(config)
             
-            graphics_item = GraphicsImageItem(image_element, dpi=self.canvas.dpi)
+            graphics_item = GraphicsImageItem(image_element, dpi=self.canvas.dpi, canvas=self.canvas)
             graphics_item.snap_enabled = self.snap_enabled
             
             command = AddElementCommand(self, image_element, graphics_item)
@@ -171,21 +171,21 @@ class ElementCreationMixin:
     def _create_graphics_item(self, element):
         """Створити graphics item для елемента (використовується при завантаженні template)"""
         if isinstance(element, TextElement):
-            graphics_item = GraphicsTextItem(element, dpi=self.canvas.dpi)
+            graphics_item = GraphicsTextItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
         elif isinstance(element, ImageElement):
-            graphics_item = GraphicsImageItem(element, dpi=self.canvas.dpi)
+            graphics_item = GraphicsImageItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
         else:
             from core.elements.barcode_element import BarcodeElement, GraphicsBarcodeItem
             from core.elements.shape_element import ShapeElement, GraphicsRectangleItem, GraphicsCircleItem, GraphicsLineItem, RectangleElement, CircleElement, LineElement
             
             if isinstance(element, BarcodeElement):
-                graphics_item = GraphicsBarcodeItem(element, dpi=self.canvas.dpi)
+                graphics_item = GraphicsBarcodeItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
             elif isinstance(element, RectangleElement):
-                graphics_item = GraphicsRectangleItem(element, dpi=self.canvas.dpi)
+                graphics_item = GraphicsRectangleItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
             elif isinstance(element, CircleElement):
-                graphics_item = GraphicsCircleItem(element, dpi=self.canvas.dpi)
+                graphics_item = GraphicsCircleItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
             elif isinstance(element, LineElement):
-                graphics_item = GraphicsLineItem(element, dpi=self.canvas.dpi)
+                graphics_item = GraphicsLineItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
             else:
                 return None
         

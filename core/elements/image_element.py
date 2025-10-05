@@ -198,10 +198,11 @@ class GraphicsImageItem(QGraphicsPixmapItem):
     # Signal для оновлення PropertyPanel
     position_changed = Signal(float, float)
     
-    def __init__(self, element, dpi=203, parent=None):
+    def __init__(self, element, dpi=203, canvas=None, parent=None):
         super().__init__(parent)
         self.element = element
         self.dpi = dpi
+        self.canvas = canvas  # Посилання на canvas для GridConfig
         
         # Snap to grid - КРИТИЧНО: створити ПЕРЕД setPos()!
         self.snap_enabled = True

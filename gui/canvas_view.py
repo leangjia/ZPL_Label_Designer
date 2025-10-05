@@ -44,7 +44,8 @@ class CanvasView(QGraphicsView):
         self.scene.selectionChanged.connect(self._on_selection_changed)
 
         # Налаштування сітки
-        self.grid_visible = True
+        from config import GridConfig
+        self.grid_config = GridConfig()  # Використовуємо GridConfig замість grid_visible
         self.grid_items = []
 
         # Нарисовать сетку
@@ -74,9 +75,10 @@ class CanvasView(QGraphicsView):
         return mm * self.dpi / 25.4  # Float для точності
     
     def _draw_grid(self):
-        """Нарисовать сетку каждые 2мм"""
-        grid_step_mm = 2.0
-        logger.debug(f"[GRID-DRAW] Drawing grid with step: {grid_step_mm}mm, visible: {self.grid_visible}")
+        """Нарисовать сітку з GridConfig (size X/Y, offset X/Y)"""
+        config = self.grid_config
+        logger.debug(f"[GRID-DRAW] Config: Size X={config.size_x_mm}mm, Y={config.size_y_mm}mm")
+        logger.debug(f"[GRID-DRAW] Config: Offset X={config.offset_x_mm}mm, Y={config.offset_y_mm}mm")
 
         pen = QPen(QColor(200, 200, 200), 1, Qt.SolidLine)
 
@@ -88,21 +90,25 @@ class CanvasView(QGraphicsView):
                 pass
         self.grid_items = []
 
-        # Вертикальні лінії
-        mm = 0.0
+        # Вертикальні лінії - починаємо з offset_x, крок size_x
+        mm = config.offset_x_mm
         while mm <= self.width_mm:
             x_px = round(self._mm_to_px(mm))
+            logger.debug(f"[GRID-DRAW] Vertical line: mm={mm:.2f}, px={x_px}")
             line = self.scene.addLine(x_px, 0, x_px, self.height_px, pen)
+            line.setVisible(config.visible)
             self.grid_items.append(line)
-            mm += grid_step_mm
+            mm += config.size_x_mm
 
-        # Горизонтальні лінії
-        mm = 0.0
+        # Горизонтальні лінії - починаємо з offset_y, крок size_y
+        mm = config.offset_y_mm
         while mm <= self.height_mm:
             y_px = round(self._mm_to_px(mm))
+            logger.debug(f"[GRID-DRAW] Horizontal line: mm={mm:.2f}, px={y_px}")
             line = self.scene.addLine(0, y_px, self.width_px, y_px, pen)
+            line.setVisible(config.visible)
             self.grid_items.append(line)
-            mm += grid_step_mm
+            mm += config.size_y_mm
 
         # Рамка
         border_pen = QPen(QColor(0, 0, 0), 2, Qt.SolidLine)
@@ -111,13 +117,28 @@ class CanvasView(QGraphicsView):
         
         # Встановити видимість ПІСЛЯ створення всіх items
         for item in self.grid_items:
-            item.setVisible(self.grid_visible)
+            item.setVisible(self.grid_config.visible)
         
-        logger.debug(f"[GRID-DRAW] Created {len(self.grid_items)} items, visibility: {self.grid_visible}")
+        logger.debug(f"[GRID-DRAW] Created {len(self.grid_items)} items, visibility: {self.grid_config.visible}")
 
+    def set_grid_config(self, grid_config):
+        """Встановити налаштування сітки"""
+        logger.debug(f"[GRID-CONFIG] Setting: Size X={grid_config.size_x_mm}mm, Y={grid_config.size_y_mm}mm")
+        logger.debug(f"[GRID-CONFIG] Setting: Offset X={grid_config.offset_x_mm}mm, Y={grid_config.offset_y_mm}mm")
+        self.grid_config = grid_config
+    
+    def get_grid_config(self):
+        """Отримати налаштування сітки"""
+        return self.grid_config
+    
+    def _redraw_grid(self):
+        """Перемалювати сітку з новими налаштуваннями"""
+        logger.debug(f"[GRID-REDRAW] Redrawing with config: {self.grid_config}")
+        self._draw_grid()
+    
     def set_grid_visible(self, visible: bool):
         """Керування видимістю сітки"""
-        self.grid_visible = visible
+        self.grid_config.visible = visible
         logger.debug(f"[GRID-VISIBILITY] Set to: {visible}")
         
         # Перевірити чи grid_items валідний
@@ -143,7 +164,7 @@ class CanvasView(QGraphicsView):
         logger.debug(f"[GRID-VISIBILITY] Setting visibility on {len(self.grid_items)} items")
         for item in self.grid_items:
             try:
-                item.setVisible(self.grid_visible)
+                item.setVisible(visible)  # ← ВИПРАВЛЕНО: використовувати parameter visible
             except RuntimeError:
                 logger.debug(f"[GRID-VISIBILITY] RuntimeError, redrawing")
                 self.grid_items = []
@@ -301,15 +322,15 @@ class CanvasView(QGraphicsView):
     
     def clear_and_redraw_grid(self):
         """Очистить scene и перемалевать сетку"""
-        grid_visible_state = self.grid_visible
+        grid_visible_state = self.grid_config.visible
         
         self.scene.clear()
         self.grid_items = []
         
-        self.grid_visible = grid_visible_state
+        self.grid_config.visible = grid_visible_state
         self._draw_grid()
         
-        logger.debug(f"[CLEAR-REDRAW] Grid redrawn with visibility: {self.grid_visible}")
+        logger.debug(f"[CLEAR-REDRAW] Grid redrawn with visibility: {self.grid_config.visible}")
     
     def set_label_size(self, width_mm, height_mm):
         """Змінити розмір етикетки"""
@@ -346,7 +367,7 @@ class CanvasView(QGraphicsView):
         # Зберегти елементи та grid_visible ПЕРЕД очисткою
         items_to_preserve = [item for item in self.scene.items() 
                             if hasattr(item, 'element')]
-        grid_visible_state = self.grid_visible
+        grid_visible_state = self.grid_config.visible
         logger.debug(f"[LABEL-SIZE] Preserving {len(items_to_preserve)} elements, grid_visible={grid_visible_state}")
         
         # Очистити scene
@@ -354,12 +375,12 @@ class CanvasView(QGraphicsView):
         self.grid_items = []
         
         # Перемалювати сітку з ЗБЕРЕЖЕНИМ state
-        self.grid_visible = grid_visible_state
+        self.grid_config.visible = grid_visible_state
         self._draw_grid()
 
         # Відновити елементи
         for item in items_to_preserve:
             self.scene.addItem(item)
         
-        logger.debug(f"[LABEL-SIZE] Grid redrawn with visibility: {self.grid_visible}, {len(items_to_preserve)} elements restored")
+        logger.debug(f"[LABEL-SIZE] Grid redrawn with visibility: {self.grid_config.visible}, {len(items_to_preserve)} elements restored")
         logger.debug(f"[LABEL-SIZE] After: {self.width_mm}x{self.height_mm}mm")

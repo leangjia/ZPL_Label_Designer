@@ -266,10 +266,11 @@ class LineElement(BaseElement):
 class GraphicsRectangleItem(QGraphicsRectItem):
     """Graphics item для Rectangle на canvas"""
     
-    def __init__(self, element, dpi=203, parent=None):
+    def __init__(self, element, dpi=203, canvas=None, parent=None):
         super().__init__(parent)
         self.element = element
         self.dpi = dpi
+        self.canvas = canvas  # Посилання на canvas для GridConfig
         
         # КРИТИЧНО: створити ПЕРЕД setPos()!
         self.snap_enabled = True
@@ -379,10 +380,11 @@ class GraphicsRectangleItem(QGraphicsRectItem):
 class GraphicsCircleItem(QGraphicsEllipseItem):
     """Graphics item для Circle на canvas"""
     
-    def __init__(self, element, dpi=203, parent=None):
+    def __init__(self, element, dpi=203, canvas=None, parent=None):
         super().__init__(parent)
         self.element = element
         self.dpi = dpi
+        self.canvas = canvas  # Посилання на canvas для GridConfig
         
         # КРИТИЧНО: створити ПЕРЕД setPos()!
         self.snap_enabled = True
@@ -488,10 +490,11 @@ class GraphicsCircleItem(QGraphicsEllipseItem):
 class GraphicsLineItem(QGraphicsLineItem):
     """Graphics item для Line на canvas"""
     
-    def __init__(self, element, dpi=203, parent=None):
+    def __init__(self, element, dpi=203, canvas=None, parent=None):
         super().__init__(parent)
         self.element = element
         self.dpi = dpi
+        self.canvas = canvas  # Посилання на canvas для GridConfig
         
         # КРИТИЧНО: створити ПЕРЕД setPos()!
         self.snap_enabled = True

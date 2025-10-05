@@ -54,7 +54,15 @@ class TemplateManager:
                 "width_mm": label_config.get('width', 28),
                 "height_mm": label_config.get('height', 28),
                 "dpi": label_config.get('dpi', 203),
-                "display_unit": display_unit.value  # ← зберегти як string
+                "display_unit": display_unit.value,  # ← зберегти як string
+                "grid": label_config.get('grid', {
+                    'size_x_mm': 2.0,
+                    'size_y_mm': 2.0,
+                    'offset_x_mm': 0.0,
+                    'offset_y_mm': 0.0,
+                    'visible': True,
+                    'snap_mode': 'grid'
+                })
             },
             "elements": [element.to_dict() for element in elements],
             "metadata": metadata or {}
