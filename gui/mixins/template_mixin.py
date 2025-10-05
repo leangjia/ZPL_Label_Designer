@@ -153,8 +153,8 @@ class TemplateMixin:
                 from config import GridConfig, SnapMode
                 grid_data = label_config['grid']
                 grid_config = GridConfig(
-                    size_x_mm=grid_data.get('size_x_mm', 2.0),
-                    size_y_mm=grid_data.get('size_y_mm', 2.0),
+                    size_x_mm=grid_data.get('size_x_mm', 1.0),
+                    size_y_mm=grid_data.get('size_y_mm', 1.0),
                     offset_x_mm=grid_data.get('offset_x_mm', 0.0),
                     offset_y_mm=grid_data.get('offset_y_mm', 0.0),
                     visible=grid_data.get('visible', True),

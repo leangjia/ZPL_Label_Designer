@@ -4,7 +4,10 @@
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QMenu
 from PySide6.QtCore import Qt, Signal, QPoint
 from PySide6.QtGui import QPen, QColor, QPainter
+
+from config import GridConfig
 from utils.logger import logger
+from utils.settings_manager import settings_manager
 
 class CanvasView(QGraphicsView):
     """Canvas с сеткой для дизайна этикетки"""
@@ -44,8 +47,19 @@ class CanvasView(QGraphicsView):
         self.scene.selectionChanged.connect(self._on_selection_changed)
 
         # Налаштування сітки
-        from config import GridConfig
-        self.grid_config = GridConfig()  # Використовуємо GridConfig замість grid_visible
+        saved_grid = settings_manager.load_grid_settings()
+        self.grid_config = GridConfig(
+            size_x_mm=saved_grid["size_x"],
+            size_y_mm=saved_grid["size_y"],
+            offset_x_mm=saved_grid["offset_x"],
+            offset_y_mm=saved_grid["offset_y"],
+            visible=saved_grid["show_gridlines"],
+            snap_mode=saved_grid["snap_mode"],
+        )
+        logger.debug(
+            "[GRID] Default size initialized: "
+            f"{self.grid_config.size_x_mm}mm x {self.grid_config.size_y_mm}mm"
+        )
         self.grid_items = []
 
         # Нарисовать сетку
@@ -128,6 +142,16 @@ class CanvasView(QGraphicsView):
         logger.debug(f"[GRID-CONFIG] Setting: Size X={grid_config.size_x_mm}mm, Y={grid_config.size_y_mm}mm")
         logger.debug(f"[GRID-CONFIG] Setting: Offset X={grid_config.offset_x_mm}mm, Y={grid_config.offset_y_mm}mm")
         self.grid_config = grid_config
+        settings_manager.save_grid_settings(
+            {
+                "size_x": grid_config.size_x_mm,
+                "size_y": grid_config.size_y_mm,
+                "offset_x": grid_config.offset_x_mm,
+                "offset_y": grid_config.offset_y_mm,
+                "show_gridlines": grid_config.visible,
+                "snap_mode": grid_config.snap_mode,
+            }
+        )
     
     def get_grid_config(self):
         """Отримати налаштування сітки"""
@@ -172,8 +196,18 @@ class CanvasView(QGraphicsView):
                 self.grid_items = []
                 self._draw_grid()
                 return
-        
+
         logger.debug(f"[GRID-VISIBILITY] Successfully set visibility to {visible}")
+        settings_manager.save_grid_settings(
+            {
+                "size_x": self.grid_config.size_x_mm,
+                "size_y": self.grid_config.size_y_mm,
+                "offset_x": self.grid_config.offset_x_mm,
+                "offset_y": self.grid_config.offset_y_mm,
+                "show_gridlines": visible,
+                "snap_mode": self.grid_config.snap_mode,
+            }
+        )
     
     def _on_selection_changed(self):
         """Обробка зміни виділення (для multi-select)"""

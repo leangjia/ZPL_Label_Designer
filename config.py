@@ -15,8 +15,8 @@ class SnapMode(Enum):
 @dataclass
 class GridConfig:
     """Конфігурація сітки (аналогічно ZebraDesigner 3)"""
-    size_x_mm: float = 2.0     # Grid Size X (крок по горизонталі)
-    size_y_mm: float = 2.0     # Grid Size Y (крок по вертикалі)
+    size_x_mm: float = 1.0     # Grid Size X (крок по горизонталі)
+    size_y_mm: float = 1.0     # Grid Size Y (крок по вертикалі)
     offset_x_mm: float = 0.0   # Grid Offset X (зсув початку сітки)
     offset_y_mm: float = 0.0   # Grid Offset Y
     visible: bool = True       # Display gridline guides

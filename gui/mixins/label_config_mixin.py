@@ -4,6 +4,7 @@
 from PySide6.QtWidgets import QWidget, QDoubleSpinBox, QPushButton, QHBoxLayout, QLabel, QComboBox
 from utils.logger import logger
 from utils.unit_converter import MeasurementUnit, UnitConverter
+from utils.settings_manager import settings_manager
 from config import DEFAULT_UNIT, UNIT_DECIMALS, UNIT_STEPS, CONFIG
 
 
@@ -71,6 +72,7 @@ class LabelConfigMixin:
         self.canvas.set_label_size(width_mm, height_mm)
         
         logger.info(f"[SIZE-APPLY] Label size updated: {width_mm}x{height_mm}mm")
+        self._persist_toolbar_settings()
     
     def _create_units_controls(self):
         """Створити контроли для вибору одиниць вимірювання"""
@@ -118,8 +120,9 @@ class LabelConfigMixin:
         
         if hasattr(self.canvas, 'v_ruler') and self.canvas.v_ruler:
             self.canvas.v_ruler.set_unit(new_unit)
-        
+
         logger.info(f"[UNITS] Update completed")
+        self._persist_toolbar_settings()
     
     def _update_label_size_spinboxes(self, old_unit, new_unit):
         """Оновити Label Size SpinBoxes при зміні units"""
@@ -174,3 +177,29 @@ class LabelConfigMixin:
         self.height_spinbox.blockSignals(False)
         
         logger.debug(f"[UNITS] Label size updated: {width_new:.2f}x{height_new:.2f} {new_unit.value}")
+
+    def _persist_toolbar_settings(self):
+        """Зберегти поточні налаштування toolbar у QSettings"""
+        show_grid = getattr(self, 'grid_visible', True)
+        snap_enabled = getattr(self, 'snap_enabled', True)
+        guides_enabled = getattr(self, 'guides_enabled', True)
+
+        label_width = getattr(self.canvas, 'width_mm', CONFIG['DEFAULT_WIDTH_MM'])
+        label_height = getattr(self.canvas, 'height_mm', CONFIG['DEFAULT_HEIGHT_MM'])
+        unit_value = getattr(getattr(self, 'current_unit', DEFAULT_UNIT), 'value', DEFAULT_UNIT.value)
+
+        settings_manager.save_toolbar_settings(
+            {
+                'show_grid': show_grid,
+                'snap_to_grid': snap_enabled,
+                'smart_guides': guides_enabled,
+                'label_width': label_width,
+                'label_height': label_height,
+                'unit': unit_value,
+            }
+        )
+        logger.debug(
+            "[TOOLBAR-PERSIST] Saved: "
+            f"grid={show_grid}, snap={snap_enabled}, guides={guides_enabled}, "
+            f"label={label_width}x{label_height}mm, unit={unit_value}"
+        )
