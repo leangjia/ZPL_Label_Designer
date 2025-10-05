@@ -110,10 +110,7 @@ class ShortcutsMixin:
         self.grid_visible = True
 
         logger.info("Show Grid, Snap to Grid and Smart Guides toggles created")
-
-        # Синхронізувати стан сітки та snap з поточними налаштуваннями
-        self._toggle_grid_visibility(2)  # 2 = Checked
-        self._toggle_snap(2)  # 2 = Checked
+        logger.debug("[CREATE-SNAP-TOGGLE] Checkboxes created, waiting for _apply_persisted_toolbar_settings()")
 
     def _toggle_grid_visibility(self, state):
         """Перемикач відображення сітки"""

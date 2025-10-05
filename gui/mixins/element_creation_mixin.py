@@ -78,7 +78,7 @@ class ElementCreationMixin:
         """Додати Rectangle"""
         from core.elements.shape_element import RectangleElement, ShapeConfig, GraphicsRectangleItem
         
-        config = ShapeConfig(x=10, y=10, width=20, height=10, fill=False, border_thickness=2)
+        config = ShapeConfig(x=10, y=10, width=20, height=10, fill=False, border_thickness=1)
         element = RectangleElement(config)
         
         graphics_item = GraphicsRectangleItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
@@ -94,7 +94,7 @@ class ElementCreationMixin:
         """Додати Circle"""
         from core.elements.shape_element import CircleElement, ShapeConfig, GraphicsCircleItem
         
-        config = ShapeConfig(x=10, y=10, width=15, height=15, fill=False, border_thickness=2)
+        config = ShapeConfig(x=10, y=10, width=15, height=15, fill=False, border_thickness=1)
         element = CircleElement(config)
         
         graphics_item = GraphicsCircleItem(element, dpi=self.canvas.dpi, canvas=self.canvas)
@@ -110,7 +110,7 @@ class ElementCreationMixin:
         """Додати Line"""
         from core.elements.shape_element import LineElement, LineConfig, GraphicsLineItem
         
-        config = LineConfig(x=10, y=10, x2=25, y2=20, thickness=2)
+        config = LineConfig(x=10, y=10, x2=25, y2=20, thickness=1)
         element = LineElement(config)
         
         graphics_item = GraphicsLineItem(element, dpi=self.canvas.dpi, canvas=self.canvas)

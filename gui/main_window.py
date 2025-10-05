@@ -319,21 +319,42 @@ class MainWindow(QMainWindow,
             self.grid_checkbox.blockSignals(True)
             self.grid_checkbox.setChecked(show_grid)
             self.grid_checkbox.blockSignals(False)
-            self._toggle_grid_visibility(Qt.Checked if show_grid else Qt.Unchecked)
+            
+            # Принудительно применить к canvas
+            self.grid_visible = show_grid
+            if hasattr(self.canvas, 'set_grid_visible'):
+                self.canvas.set_grid_visible(show_grid)
+                # Принудительный redraw если grid должна быть видна
+                if show_grid and not self.canvas.grid_items:
+                    logger.debug("[TOOLBAR-PERSIST] Forcing grid redraw")
+                    self.canvas._draw_grid()
+            logger.debug(f"[TOOLBAR-PERSIST] Show Grid applied: {show_grid}")
 
         # Apply Snap to Grid state
         if hasattr(self, 'snap_checkbox'):
             self.snap_checkbox.blockSignals(True)
             self.snap_checkbox.setChecked(snap_to_grid)
             self.snap_checkbox.blockSignals(False)
-            self._toggle_snap(Qt.Checked if snap_to_grid else Qt.Unchecked)
+            
+            # Принудительно применить
+            self.snap_enabled = snap_to_grid
+            # Обновить ВСЕ существующие элементы
+            for item in self.graphics_items:
+                if hasattr(item, 'snap_enabled'):
+                    item.snap_enabled = snap_to_grid
+            logger.debug(f"[TOOLBAR-PERSIST] Snap to Grid applied: {snap_to_grid} (items: {len(self.graphics_items)})")
 
         # Apply Smart Guides state
         if hasattr(self, 'guides_checkbox'):
             self.guides_checkbox.blockSignals(True)
             self.guides_checkbox.setChecked(smart_guides)
             self.guides_checkbox.blockSignals(False)
-            self._toggle_guides(Qt.Checked if smart_guides else Qt.Unchecked)
+            
+            # Принудительно применить
+            self.guides_enabled = smart_guides
+            if hasattr(self, 'smart_guides'):
+                self.smart_guides.set_enabled(smart_guides)
+            logger.debug(f"[TOOLBAR-PERSIST] Smart Guides applied: {smart_guides}")
 
         # Apply label size values in current unit
         width_mm = toolbar_settings['label_width']
@@ -361,15 +382,21 @@ class MainWindow(QMainWindow,
                 self.units_combobox.blockSignals(True)
                 self.units_combobox.setCurrentIndex(index)
                 self.units_combobox.blockSignals(False)
-
-                # Ensure old unit passed correctly to _on_unit_changed
-                previous_unit = self.current_unit
-                if previous_unit != saved_unit:
-                    self.current_unit = previous_unit
-                    self._on_unit_changed(index)
-                else:
-                    # Units already match, but we still want suffix updates
-                    self._update_label_size_spinboxes(saved_unit, saved_unit)
+                
+                # Принудительно применить к rulers
+                self.current_unit = saved_unit
+                
+                # Применить к rulers НАПРЯМУЮ
+                if hasattr(self.canvas, 'h_ruler') and self.canvas.h_ruler:
+                    self.canvas.h_ruler.set_unit(saved_unit)
+                    logger.debug(f"[TOOLBAR-PERSIST] H Ruler unit set to: {saved_unit.value}")
+                
+                if hasattr(self.canvas, 'v_ruler') and self.canvas.v_ruler:
+                    self.canvas.v_ruler.set_unit(saved_unit)
+                    logger.debug(f"[TOOLBAR-PERSIST] V Ruler unit set to: {saved_unit.value}")
+                
+                # Обновить spinboxes суффиксы
+                self._update_label_size_spinboxes(saved_unit, saved_unit)
 
         # Sync canvas label size with persisted values
         if hasattr(self, 'canvas'):
