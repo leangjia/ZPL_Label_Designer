@@ -28,9 +28,23 @@ class ShortcutsMixin:
         zoom_reset = QShortcut(QKeySequence("Ctrl+0"), self)
         zoom_reset.activated.connect(self.canvas.reset_zoom)
         
+        # Grid visibility toggle
+        grid_toggle = QShortcut(QKeySequence("Ctrl+Shift+G"), self)
+        grid_toggle.activated.connect(
+            lambda: self.grid_checkbox.toggle()
+            if hasattr(self, "grid_checkbox")
+            else self._toggle_grid_visibility(
+                Qt.Unchecked if getattr(self, "grid_visible", True) else Qt.Checked
+            )
+        )
+
         # Snap toggle
         snap_toggle = QShortcut(QKeySequence("Ctrl+G"), self)
-        snap_toggle.activated.connect(lambda: self._toggle_snap(0 if self.snap_enabled else 2))
+        snap_toggle.activated.connect(
+            lambda: self.snap_checkbox.toggle()
+            if hasattr(self, "snap_checkbox")
+            else self._toggle_snap(0 if self.snap_enabled else 2)
+        )
         
         # Font Styles - Bold
         bold_shortcut = QShortcut(QKeySequence("Ctrl+B"), self)
@@ -49,6 +63,7 @@ class ShortcutsMixin:
         underline_toggle.activated.connect(self._toggle_underline)
         
         logger.debug("Zoom shortcuts: Ctrl+Plus, Ctrl+Minus, Ctrl+0")
+        logger.debug("Grid visibility shortcut: Ctrl+Shift+G")
         logger.debug("Snap shortcut: Ctrl+G")
     
     def _toggle_guides(self, state):
@@ -58,25 +73,51 @@ class ShortcutsMixin:
         logger.debug(f"[GUIDES-TOGGLE] Enabled: {self.guides_enabled}")
     
     def _create_snap_toggle(self):
-        """Створити toggle для snap to grid"""
-        snap_checkbox = QCheckBox("Snap to Grid")
-        snap_checkbox.setChecked(True)
-        snap_checkbox.stateChanged.connect(self._toggle_snap)
-        
-        # Додати до toolbar
+        """Створити toggle для відображення сітки, snap і smart guides"""
         self.toolbar.addSeparator()
-        self.toolbar.addWidget(snap_checkbox)
-        
+
+        # Grid visibility checkbox
+        self.grid_checkbox = QCheckBox("Show Grid")
+        self.grid_checkbox.setChecked(True)
+        self.grid_checkbox.stateChanged.connect(self._toggle_grid_visibility)
+        self.toolbar.addWidget(self.grid_checkbox)
+
+        # Snap checkbox
+        self.snap_checkbox = QCheckBox("Snap to Grid")
+        self.snap_checkbox.setChecked(True)
+        self.snap_checkbox.stateChanged.connect(self._toggle_snap)
+        self.toolbar.addWidget(self.snap_checkbox)
+
         # Smart Guides checkbox
-        guides_checkbox = QCheckBox("Smart Guides")
-        guides_checkbox.setChecked(True)
-        guides_checkbox.stateChanged.connect(self._toggle_guides)
-        self.toolbar.addWidget(guides_checkbox)
-        
-        logger.info("Snap to Grid and Smart Guides toggles created")
-        
-        # КРИТИЧНО: викликати _toggle_snap щоб встановити snap для існуючих елементів
-        self._toggle_snap(2)  # 2 = Qt.Checked
+        self.guides_checkbox = QCheckBox("Smart Guides")
+        self.guides_checkbox.setChecked(True)
+        self.guides_checkbox.stateChanged.connect(self._toggle_guides)
+        self.toolbar.addWidget(self.guides_checkbox)
+
+        self.grid_visible = True
+
+        logger.info("Show Grid, Snap to Grid and Smart Guides toggles created")
+
+        # Синхронізувати стан сітки та snap з поточними налаштуваннями
+        self._toggle_grid_visibility(Qt.Checked)
+        self._toggle_snap(Qt.Checked)
+
+    def _toggle_grid_visibility(self, state):
+        """Перемикач відображення сітки"""
+        self.grid_visible = (state == Qt.Checked)
+
+        if hasattr(self, "canvas") and hasattr(self.canvas, "set_grid_visible"):
+            self.canvas.set_grid_visible(self.grid_visible)
+            logger.debug(f"[GRID-TOGGLE] Visible: {self.grid_visible}")
+        else:
+            logger.warning("Canvas does not support set_grid_visible")
+
+        # Persist state if відповідні налаштування існують
+        if hasattr(self, "settings"):
+            if isinstance(self.settings, dict):
+                self.settings["show_grid"] = self.grid_visible
+            elif hasattr(self.settings, "setValue"):
+                self.settings.setValue("show_grid", self.grid_visible)
     
     def _toggle_snap(self, state):
         """Увімкнути/вимкнути snap"""
@@ -149,8 +190,11 @@ class ShortcutsMixin:
             # === SNAP ===
             elif key == Qt.Key_G:
                 logger.debug("[SHORTCUT] Ctrl+G - Toggle Snap")
-                self.snap_enabled = not self.snap_enabled
-                self._toggle_snap(Qt.Checked if self.snap_enabled else Qt.Unchecked)
+                if hasattr(self, "snap_checkbox"):
+                    self.snap_checkbox.toggle()
+                else:
+                    self.snap_enabled = not self.snap_enabled
+                    self._toggle_snap(Qt.Checked if self.snap_enabled else Qt.Unchecked)
             # === CLIPBOARD ===
             elif key == Qt.Key_C:
                 logger.debug("[SHORTCUT] Ctrl+C - Copy")
