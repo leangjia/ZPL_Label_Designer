@@ -168,9 +168,7 @@ class TemplateMixin:
             if width_mm != self.canvas.width_mm or height_mm != self.canvas.height_mm:
                 logger.info(f"[LOAD-TEMPLATE] Applying new label size: {width_mm}x{height_mm}mm")
                 self.canvas.set_label_size(width_mm, height_mm)
-                self.h_ruler.set_length(width_mm)
-                self.v_ruler.set_length(height_mm)
-                
+
                 self.width_spinbox.blockSignals(True)
                 self.height_spinbox.blockSignals(True)
                 self.width_spinbox.setValue(width_mm)
