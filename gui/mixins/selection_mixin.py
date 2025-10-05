@@ -58,8 +58,8 @@ class SelectionMixin:
             width_mm = width_px * 25.4 / dpi
             height_mm = height_px * 25.4 / dpi
             
-            logger.debug(f"[BOUNDS] Element at: x={x:.2f}mm, y={y:.2f}mm")
-            logger.debug(f"[BOUNDS] Size: width={width_mm:.2f}mm, height={height_mm:.2f}mm")
+            logger.debug(f"[BOUNDS-UPDATE] Position: x={x:.2f}mm, y={y:.2f}mm")
+            logger.debug(f"[BOUNDS-UPDATE] Size: width={width_mm:.2f}mm, height={height_mm:.2f}mm")
             
             self.h_ruler.highlight_bounds(x, width_mm)
             self.v_ruler.highlight_bounds(y, height_mm)

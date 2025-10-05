@@ -63,6 +63,7 @@ class MainWindow(QMainWindow,
         # Canvas
         self.canvas = CanvasView(width_mm=28, height_mm=28, dpi=203)
         logger.info("Canvas created (28x28mm, DPI 203)")
+        self.canvas.bounds_update_callback = self._highlight_element_bounds
         
         # Sidebar
         self.sidebar = Sidebar()

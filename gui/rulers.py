@@ -232,7 +232,11 @@ class RulerWidget(QWidget):
     def highlight_bounds(self, start_mm, width_mm):
         """Підсвітити межі елемента"""
         orientation_name = "H" if self.orientation == Qt.Horizontal else "V"
-        logger.debug(f"[BOUNDS-{orientation_name}] Highlight: start={start_mm:.2f}mm, width={width_mm:.2f}mm")
+        end_mm = start_mm + width_mm
+        logger.debug(
+            f"[RULER-{orientation_name}] Bounds updated: start={start_mm:.2f}mm, "
+            f"end={end_mm:.2f}mm, width={width_mm:.2f}mm"
+        )
         self.highlighted_bounds = (start_mm, width_mm)
         self.update()
     

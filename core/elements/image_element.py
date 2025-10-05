@@ -270,45 +270,67 @@ class GraphicsImageItem(QGraphicsPixmapItem):
         """Обробка змін item (snap to grid, position updates)"""
         if change == QGraphicsItem.ItemPositionChange:
             new_pos = value
-            
+
             # Конвертувати у мм
             x_mm = self._px_to_mm(new_pos.x())
             y_mm = self._px_to_mm(new_pos.y())
-            
+
+            logger.debug(
+                f"[ITEM-DRAG] Position changing: ({new_pos.x():.2f}, {new_pos.y():.2f})px -> "
+                f"({x_mm:.2f}, {y_mm:.2f})mm"
+            )
+
             # EMIT cursor position для rulers при drag
             if self.canvas:
                 logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
                 self.canvas.cursor_position_changed.emit(x_mm, y_mm)
-            
+
             if self.snap_enabled:
                 # Snap до сітки
                 snapped_x = self._snap_to_grid(x_mm)
                 snapped_y = self._snap_to_grid(y_mm)
-                
+
                 logger.debug(f"[IMAGE-SNAP] ({x_mm:.2f}, {y_mm:.2f})mm -> ({snapped_x:.2f}, {snapped_y:.2f})mm")
-                
+
                 # Конвертувати назад у пікселі
                 snapped_pos = QPointF(
                     self._mm_to_px(snapped_x),
                     self._mm_to_px(snapped_y)
                 )
-                
+
                 return snapped_pos
-            
+
             return new_pos
-        
+
         elif change == QGraphicsItem.ItemPositionHasChanged:
             # Оновити config після переміщення
             x_mm = self._px_to_mm(self.pos().x())
             y_mm = self._px_to_mm(self.pos().y())
+
+            logger.debug(
+                f"[ITEM-DRAG] Position changed (raw): ({self.pos().x():.2f}, {self.pos().y():.2f})px -> "
+                f"({x_mm:.2f}, {y_mm:.2f})mm"
+            )
+
             self.element.config.x = x_mm
             self.element.config.y = y_mm
-            
+
+            if (
+                self.canvas
+                and getattr(self.canvas, 'bounds_update_callback', None)
+                and self.isSelected()
+            ):
+                logger.debug(
+                    f"[ITEM-DRAG] Position changed: bounds update needed "
+                    f"({self.element.config.x:.2f}, {self.element.config.y:.2f})mm"
+                )
+                self.canvas.bounds_update_callback(self)
+
             # Signal для PropertyPanel
             self.position_changed.emit(x_mm, y_mm)
-        
+
         return super().itemChange(change, value)
-    
+
     def _snap_to_grid(self, value_mm):
         """Прив'язка значення до сітки"""
         nearest = round(value_mm / self.grid_step_mm) * self.grid_step_mm
