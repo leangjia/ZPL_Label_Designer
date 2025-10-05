@@ -224,10 +224,18 @@ class CanvasView(QGraphicsView):
     
     def _update_rulers_scale(self):
         """Оновити масштаб лінейок"""
-        if self.h_ruler and self.v_ruler:
-            logger.debug(f"[RULER-SCALE] Updated to: {self.current_scale:.2f}")
+        updated = False
+
+        if self.h_ruler:
             self.h_ruler.update_scale(self.current_scale)
+            updated = True
+
+        if self.v_ruler:
             self.v_ruler.update_scale(self.current_scale)
+            updated = True
+
+        if updated:
+            logger.debug(f"[RULER-SCALE] Updated to: {self.current_scale:.2f}")
     
     def zoom_in(self):
         """Zoom in відносно центру viewport"""
@@ -282,6 +290,15 @@ class CanvasView(QGraphicsView):
         self.height_mm = height_mm
         self.width_px = round(self._mm_to_px(width_mm))
         self.height_px = round(self._mm_to_px(height_mm))
+
+        # Оновити лінейки, якщо вони прикріплені до canvas
+        if self.h_ruler:
+            self.h_ruler.set_length(width_mm)
+        if self.v_ruler:
+            self.v_ruler.set_length(height_mm)
+
+        # Переконатися, що масштаб лінейок синхронізований з canvas
+        self._update_rulers_scale()
         
         logger.debug(f"[LABEL-SIZE] Width: {width_mm}mm = {self.width_px}px")
         logger.debug(f"[LABEL-SIZE] Height: {height_mm}mm = {self.height_px}px")
