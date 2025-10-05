@@ -34,7 +34,7 @@ class ShortcutsMixin:
             lambda: self.grid_checkbox.toggle()
             if hasattr(self, "grid_checkbox")
             else self._toggle_grid_visibility(
-                Qt.Unchecked if getattr(self, "grid_visible", True) else Qt.Checked
+                0 if getattr(self, "grid_visible", True) else 2  # 0=Unchecked, 2=Checked
             )
         )
 
@@ -99,12 +99,12 @@ class ShortcutsMixin:
         logger.info("Show Grid, Snap to Grid and Smart Guides toggles created")
 
         # Синхронізувати стан сітки та snap з поточними налаштуваннями
-        self._toggle_grid_visibility(Qt.Checked)
-        self._toggle_snap(Qt.Checked)
+        self._toggle_grid_visibility(2)  # 2 = Checked
+        self._toggle_snap(2)  # 2 = Checked
 
     def _toggle_grid_visibility(self, state):
         """Перемикач відображення сітки"""
-        self.grid_visible = (state == Qt.Checked)
+        self.grid_visible = (state == 2)  # QCheckBox відправляє int: 0=Unchecked, 2=Checked
 
         if hasattr(self, "canvas") and hasattr(self.canvas, "set_grid_visible"):
             self.canvas.set_grid_visible(self.grid_visible)
