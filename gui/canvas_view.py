@@ -120,8 +120,34 @@ class CanvasView(QGraphicsView):
         if not self.grid_items:
             self._draw_grid()
 
+        needs_rebuild = False
+
         for item in self.grid_items:
-            item.setVisible(self.grid_visible)
+            if item is None:
+                needs_rebuild = True
+                break
+
+            try:
+                if item.scene() is None:
+                    needs_rebuild = True
+                    break
+
+                item.setVisible(self.grid_visible)
+            except RuntimeError:
+                needs_rebuild = True
+                break
+
+        if needs_rebuild:
+            self.grid_items = []
+            self._draw_grid()
+
+            for item in self.grid_items:
+                try:
+                    item.setVisible(self.grid_visible)
+                except RuntimeError:
+                    # Если элемент оказался удален сразу после создания,
+                    # просто пропустим его, следующая итерация відновить сітку.
+                    pass
     
     def _on_selection_changed(self):
         """Обробка зміни виділення (для multi-select)"""
