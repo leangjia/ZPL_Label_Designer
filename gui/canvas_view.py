@@ -62,6 +62,8 @@ class CanvasView(QGraphicsView):
         # Посилання на лінейки (буде встановлено з MainWindow)
         self.h_ruler = None
         self.v_ruler = None
+        # Callback для оновлення bounds highlight під час drag
+        self.bounds_update_callback = None
         
         # Увімкнути mouse tracking
         self.setMouseTracking(True)

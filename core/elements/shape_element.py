@@ -319,40 +319,62 @@ class GraphicsRectangleItem(QGraphicsRectItem):
         """Перевизначити для snap to grid"""
         if change == QGraphicsItem.ItemPositionChange:
             new_pos = value
-            
+
             # Конвертувати у мм
             x_mm = self._px_to_mm(new_pos.x())
             y_mm = self._px_to_mm(new_pos.y())
-            
+
+            logger.debug(
+                f"[ITEM-DRAG] Position changing: ({new_pos.x():.2f}, {new_pos.y():.2f})px -> "
+                f"({x_mm:.2f}, {y_mm:.2f})mm"
+            )
+
             # EMIT cursor position для rulers при drag
             if self.canvas:
                 logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
                 self.canvas.cursor_position_changed.emit(x_mm, y_mm)
-            
+
             if self.snap_enabled:
                 # Snap до сітки
                 snapped_x = self._snap_to_grid(x_mm)
                 snapped_y = self._snap_to_grid(y_mm)
-                
+
                 # Конвертувати назад у пікселі
                 snapped_pos = QPointF(
                     self._mm_to_px(snapped_x),
                     self._mm_to_px(snapped_y)
                 )
-                
+
                 return snapped_pos
-            
+
             return new_pos
-        
+
         elif change == QGraphicsItem.ItemPositionHasChanged:
             # Оновити config після переміщення
             x_mm = self._px_to_mm(self.pos().x())
             y_mm = self._px_to_mm(self.pos().y())
+
+            logger.debug(
+                f"[ITEM-DRAG] Position changed (raw): ({self.pos().x():.2f}, {self.pos().y():.2f})px -> "
+                f"({x_mm:.2f}, {y_mm:.2f})mm"
+            )
+
             self.element.config.x = x_mm
             self.element.config.y = y_mm
-        
+
+            if (
+                self.canvas
+                and getattr(self.canvas, 'bounds_update_callback', None)
+                and self.isSelected()
+            ):
+                logger.debug(
+                    f"[ITEM-DRAG] Position changed: bounds update needed "
+                    f"({self.element.config.x:.2f}, {self.element.config.y:.2f})mm"
+                )
+                self.canvas.bounds_update_callback(self)
+
         return super().itemChange(change, value)
-    
+
     def _snap_to_grid(self, value_mm):
         """Прив'язка до сітки"""
         nearest = round(value_mm / self.grid_step_mm) * self.grid_step_mm
@@ -441,36 +463,58 @@ class GraphicsCircleItem(QGraphicsEllipseItem):
         """Перевизначити для snap to grid - аналогічно Rectangle"""
         if change == QGraphicsItem.ItemPositionChange:
             new_pos = value
-            
+
             x_mm = self._px_to_mm(new_pos.x())
             y_mm = self._px_to_mm(new_pos.y())
-            
+
+            logger.debug(
+                f"[ITEM-DRAG] Position changing: ({new_pos.x():.2f}, {new_pos.y():.2f})px -> "
+                f"({x_mm:.2f}, {y_mm:.2f})mm"
+            )
+
             # EMIT cursor position для rulers при drag
             if self.canvas:
                 logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
                 self.canvas.cursor_position_changed.emit(x_mm, y_mm)
-            
+
             if self.snap_enabled:
                 snapped_x = self._snap_to_grid(x_mm)
                 snapped_y = self._snap_to_grid(y_mm)
-                
+
                 snapped_pos = QPointF(
                     self._mm_to_px(snapped_x),
                     self._mm_to_px(snapped_y)
                 )
-                
+
                 return snapped_pos
-            
+
             return new_pos
-        
+
         elif change == QGraphicsItem.ItemPositionHasChanged:
             x_mm = self._px_to_mm(self.pos().x())
             y_mm = self._px_to_mm(self.pos().y())
+
+            logger.debug(
+                f"[ITEM-DRAG] Position changed (raw): ({self.pos().x():.2f}, {self.pos().y():.2f})px -> "
+                f"({x_mm:.2f}, {y_mm:.2f})mm"
+            )
+
             self.element.config.x = x_mm
             self.element.config.y = y_mm
-        
+
+            if (
+                self.canvas
+                and getattr(self.canvas, 'bounds_update_callback', None)
+                and self.isSelected()
+            ):
+                logger.debug(
+                    f"[ITEM-DRAG] Position changed: bounds update needed "
+                    f"({self.element.config.x:.2f}, {self.element.config.y:.2f})mm"
+                )
+                self.canvas.bounds_update_callback(self)
+
         return super().itemChange(change, value)
-    
+
     def _snap_to_grid(self, value_mm):
         """Прив'язка до сітки"""
         nearest = round(value_mm / self.grid_step_mm) * self.grid_step_mm
@@ -552,28 +596,32 @@ class GraphicsLineItem(QGraphicsLineItem):
             # Line має складнішу логіку snap - snap обох кінців
             # Тут спрощена версія - snap тільки start point
             new_pos = value
-            
+
             x_mm = self._px_to_mm(new_pos.x())
             y_mm = self._px_to_mm(new_pos.y())
-            
+
+            logger.debug(
+                f"[ITEM-DRAG] Position changing: start -> ({x_mm:.2f}, {y_mm:.2f})mm"
+            )
+
             # EMIT cursor position для rulers при drag
             if self.canvas:
                 logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
                 self.canvas.cursor_position_changed.emit(x_mm, y_mm)
-            
+
             if self.snap_enabled:
                 snapped_x = self._snap_to_grid(x_mm)
                 snapped_y = self._snap_to_grid(y_mm)
-                
+
                 snapped_pos = QPointF(
                     self._mm_to_px(snapped_x),
                     self._mm_to_px(snapped_y)
                 )
-                
+
                 return snapped_pos
-            
+
             return new_pos
-        
+
         elif change == QGraphicsItem.ItemPositionHasChanged:
             # Оновити config після переміщення
             # Line config зберігає абсолютні координати
@@ -582,14 +630,30 @@ class GraphicsLineItem(QGraphicsLineItem):
             y1_mm = self._px_to_mm(line_in_scene.y1() + self.pos().y())
             x2_mm = self._px_to_mm(line_in_scene.x2() + self.pos().x())
             y2_mm = self._px_to_mm(line_in_scene.y2() + self.pos().y())
-            
+
+            logger.debug(
+                f"[ITEM-DRAG] Position changed (line): start=({x1_mm:.2f}, {y1_mm:.2f})mm, "
+                f"end=({x2_mm:.2f}, {y2_mm:.2f})mm"
+            )
+
             self.element.config.x = x1_mm
             self.element.config.y = y1_mm
             self.element.config.x2 = x2_mm
             self.element.config.y2 = y2_mm
-        
+
+            if (
+                self.canvas
+                and getattr(self.canvas, 'bounds_update_callback', None)
+                and self.isSelected()
+            ):
+                logger.debug(
+                    f"[ITEM-DRAG] Position changed: bounds update needed "
+                    f"start=({self.element.config.x:.2f}, {self.element.config.y:.2f})mm"
+                )
+                self.canvas.bounds_update_callback(self)
+
         return super().itemChange(change, value)
-    
+
     def _snap_to_grid(self, value_mm):
         """Прив'язка до сітки"""
         nearest = round(value_mm / self.grid_step_mm) * self.grid_step_mm

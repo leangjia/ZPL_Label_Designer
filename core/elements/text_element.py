@@ -4,6 +4,8 @@
 from PySide6.QtWidgets import QGraphicsTextItem, QGraphicsItem
 from PySide6.QtCore import Qt, Signal, QPointF
 from PySide6.QtGui import QFont
+
+from utils.logger import logger
 from .base import BaseElement, ElementConfig
 
 class TextElement(BaseElement):
@@ -44,7 +46,6 @@ class TextElement(BaseElement):
     
     def to_zpl(self, dpi):
         """Генерация ZPL кода"""
-        from utils.logger import logger
         
         # Конвертация мм → dots
         x_dots = int(self.config.x * dpi / 25.4)
@@ -132,62 +133,81 @@ class GraphicsTextItem(QGraphicsTextItem):
         # SNAP TO GRID - при движении
         if change == QGraphicsItem.ItemPositionChange:
             new_pos = value
-            
+
             # Конвертувати у мм
             x_mm = self._px_to_mm(new_pos.x())
             y_mm = self._px_to_mm(new_pos.y())
-            
+
+            logger.debug(
+                f"[ITEM-DRAG] Position changing: ({new_pos.x():.2f}, {new_pos.y():.2f})px -> "
+                f"({x_mm:.2f}, {y_mm:.2f})mm"
+            )
+
             # EMIT cursor position для rulers при drag
             if self.canvas:
-                from utils.logger import logger
                 logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
                 self.canvas.cursor_position_changed.emit(x_mm, y_mm)
-            
+
             if self.snap_enabled:
                 # Snap до сітки (окремо для X та Y)
                 snapped_x = self._snap_to_grid(x_mm, 'x')
                 snapped_y = self._snap_to_grid(y_mm, 'y')
-                
-                # DEBUG
-                from utils.logger import logger
+
                 if snapped_x != x_mm or snapped_y != y_mm:
-                    logger.debug(f"[SNAP] {x_mm:.2f}mm, {y_mm:.2f}mm -> {snapped_x:.1f}mm, {snapped_y:.1f}mm")
-                
+                    logger.debug(
+                        f"[SNAP] {x_mm:.2f}mm, {y_mm:.2f}mm -> {snapped_x:.1f}mm, {snapped_y:.1f}mm"
+                    )
+
                 # Конвертувати назад у пікселі
                 snapped_pos = QPointF(
                     self._mm_to_px(snapped_x),
                     self._mm_to_px(snapped_y)
                 )
-                
+
                 return snapped_pos
-            
+
             return new_pos
-        
+
         # ОБНОВЛЕНИЕ ЭЛЕМЕНТА - после движения
         if change == QGraphicsTextItem.ItemPositionHasChanged:
             # Обновить элемент с учетом snap
             x_mm = self._px_to_mm(self.pos().x())
             y_mm = self._px_to_mm(self.pos().y())
-            
+
+            logger.debug(
+                f"[ITEM-DRAG] Position changed (raw): ({self.pos().x():.2f}, {self.pos().y():.2f})px -> "
+                f"({x_mm:.2f}, {y_mm:.2f})mm"
+            )
+
             # Применить snap если включен
             if self.snap_enabled:
                 x_mm = self._snap_to_grid(x_mm)
                 y_mm = self._snap_to_grid(y_mm)
-            
+
             self.element.config.x = x_mm
             self.element.config.y = y_mm
-            
+
             # Сигнал об изменении
             self.position_changed.emit(
-                self.element.config.x, 
+                self.element.config.x,
                 self.element.config.y
             )
-        
+
+            if (
+                self.canvas
+                and getattr(self.canvas, 'bounds_update_callback', None)
+                and self.isSelected()
+            ):
+                logger.debug(
+                    f"[ITEM-DRAG] Position changed: bounds update needed "
+                    f"({self.element.config.x:.2f}, {self.element.config.y:.2f})mm"
+                )
+                self.canvas.bounds_update_callback(self)
+
         return super().itemChange(change, value)
-    
+
     def _snap_to_grid(self, value_mm, axis='x'):
         """Прив'язка до сітки з GridConfig (size, offset)"""
-        from utils.logger import logger
         from config import SnapMode
         
         # Fallback для старих елементів без canvas
@@ -242,7 +262,6 @@ class GraphicsTextItem(QGraphicsTextItem):
     
     def update_display(self):
         """Обновить визуальное отображение с учетом стилей"""
-        from utils.logger import logger
         
         font = self.font()
         
