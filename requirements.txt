@@ -1,0 +1,5 @@
+PySide6>=6.7.0
+Pillow>=10.4.0
+requests==2.31.0
+Flask==3.0.0
+python-barcode==0.15.1
