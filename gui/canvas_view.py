@@ -39,10 +39,14 @@ class CanvasView(QGraphicsView):
         self.setRenderHint(QPainter.Antialiasing)
         self.setDragMode(QGraphicsView.RubberBandDrag)
         self.setBackgroundBrush(QColor(255, 255, 255))
-        
+
         # Підключити signal для multi-select
         self.scene.selectionChanged.connect(self._on_selection_changed)
-        
+
+        # Налаштування сітки
+        self.grid_visible = True
+        self.grid_items = []
+
         # Нарисовать сетку
         self._draw_grid()
         
@@ -73,26 +77,51 @@ class CanvasView(QGraphicsView):
         """Нарисовать сетку каждые 2мм"""
         grid_step_mm = 2.0
         grid_step_px = self._mm_to_px(grid_step_mm)  # Float!
-        
+
         pen = QPen(QColor(200, 200, 200), 1, Qt.SolidLine)
-        
+
+        # Прибрати попередню сітку
+        for item in self.grid_items:
+            try:
+                self.scene.removeItem(item)
+            except RuntimeError:
+                # Item вже видалений зі сцени
+                pass
+        self.grid_items = []
+
         # Вертикальні лінії - використовуємо while для float
         mm = 0.0
         while mm <= self.width_mm:
             x_px = round(self._mm_to_px(mm))  # Округлюємо для точної позиції
-            self.scene.addLine(x_px, 0, x_px, self.height_px, pen)
+            line = self.scene.addLine(x_px, 0, x_px, self.height_px, pen)
+            line.setVisible(self.grid_visible)
+            self.grid_items.append(line)
             mm += grid_step_mm
-        
+
         # Горизонтальні лінії
         mm = 0.0
         while mm <= self.height_mm:
             y_px = round(self._mm_to_px(mm))
-            self.scene.addLine(0, y_px, self.width_px, y_px, pen)
+            line = self.scene.addLine(0, y_px, self.width_px, y_px, pen)
+            line.setVisible(self.grid_visible)
+            self.grid_items.append(line)
             mm += grid_step_mm
-        
+
         # Рамка
         border_pen = QPen(QColor(0, 0, 0), 2, Qt.SolidLine)
-        self.scene.addRect(0, 0, self.width_px, self.height_px, border_pen)
+        border = self.scene.addRect(0, 0, self.width_px, self.height_px, border_pen)
+        border.setVisible(self.grid_visible)
+        self.grid_items.append(border)
+
+    def set_grid_visible(self, visible: bool):
+        """Керування видимістю сітки"""
+        self.grid_visible = visible
+
+        if not self.grid_items:
+            self._draw_grid()
+
+        for item in self.grid_items:
+            item.setVisible(self.grid_visible)
     
     def _on_selection_changed(self):
         """Обробка зміни виділення (для multi-select)"""
@@ -236,7 +265,8 @@ class CanvasView(QGraphicsView):
     def clear_and_redraw_grid(self):
         """Очистить scene и перемалевать сетку"""
         self.scene.clear()
-        self._draw_grid()
+        self.grid_items = []
+        self.set_grid_visible(self.grid_visible)
     
     def set_label_size(self, width_mm, height_mm):
         """Змінити розмір етикетки"""
@@ -268,10 +298,11 @@ class CanvasView(QGraphicsView):
         
         # Очистити scene
         self.scene.clear()
-        
-        # Перемалювати сітку
-        self._draw_grid()
-        
+
+        # Скинути сітку та перемалювати її за потреби
+        self.grid_items = []
+        self.set_grid_visible(self.grid_visible)
+
         # Відновити елементи
         for item in items_to_preserve:
             self.scene.addItem(item)
