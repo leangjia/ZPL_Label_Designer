@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Главное окно приложения"""
 
-from PySide6.QtWidgets import (QMainWindow, QDockWidget, QWidget, QGridLayout)
+from PySide6.QtWidgets import (QMainWindow, QDockWidget, QWidget, QGridLayout, QMenu)
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QUndoStack
+from PySide6.QtGui import QAction, QKeySequence, QUndoStack
 from .canvas_view import CanvasView
 from .toolbar import EditorToolbar
 from .sidebar import Sidebar
@@ -104,8 +104,12 @@ class MainWindow(QMainWindow,
         self.setCentralWidget(central_widget)
         logger.info("Central widget with rulers configured")
         
+        # Actions & menus
+        self._create_actions()
+        self._create_menus()
+
         # Toolbar
-        self.toolbar = EditorToolbar(self)
+        self.toolbar = EditorToolbar(self.actions, self.menus, parent=self)
         self.addToolBar(self.toolbar)
         logger.info("Toolbar created")
         
@@ -150,21 +154,125 @@ class MainWindow(QMainWindow,
         # Sidebar signals
         self.sidebar.element_type_selected.connect(self._on_sidebar_element_selected)
         
-        # Toolbar signals
-        self.toolbar.add_text_action.triggered.connect(self._add_text)
-        self.toolbar.add_ean13_action.triggered.connect(self._add_ean13)
-        self.toolbar.add_code128_action.triggered.connect(self._add_code128)
-        self.toolbar.add_qrcode_action.triggered.connect(self._add_qrcode)
-        self.toolbar.add_rectangle_action.triggered.connect(self._add_rectangle)
-        self.toolbar.add_circle_action.triggered.connect(self._add_circle)
-        self.toolbar.add_line_action.triggered.connect(self._add_line)
-        self.toolbar.add_image_action.triggered.connect(self._add_image)
-        self.toolbar.save_action.triggered.connect(self._save_template)
-        self.toolbar.load_action.triggered.connect(self._load_template)
-        self.toolbar.export_action.triggered.connect(self._export_zpl)
-        self.toolbar.preview_action.triggered.connect(self._show_preview)
-        
+        # Actions signals
+        self.actions['add_text'].triggered.connect(self._add_text)
+        self.actions['add_ean13'].triggered.connect(self._add_ean13)
+        self.actions['add_code128'].triggered.connect(self._add_code128)
+        self.actions['add_qrcode'].triggered.connect(self._add_qrcode)
+        self.actions['add_rectangle'].triggered.connect(self._add_rectangle)
+        self.actions['add_circle'].triggered.connect(self._add_circle)
+        self.actions['add_line'].triggered.connect(self._add_line)
+        self.actions['add_image'].triggered.connect(self._add_image)
+        self.actions['save'].triggered.connect(self._save_template)
+        self.actions['load'].triggered.connect(self._load_template)
+        self.actions['export'].triggered.connect(self._export_zpl)
+        self.actions['preview'].triggered.connect(self._show_preview)
+
         logger.info("All signals connected")
+
+    def _create_actions(self):
+        """Create and configure reusable actions and menus."""
+
+        self.actions = {}
+        self.menus = {}
+
+        # Basic actions
+        add_text_action = QAction("Add Text", self)
+        add_text_action.setShortcut(QKeySequence("Ctrl+T"))
+        add_text_action.setToolTip("Добавить текст (Ctrl+T)")
+        self.actions['add_text'] = add_text_action
+
+        add_image_action = QAction("Add Image", self)
+        add_image_action.setShortcut(QKeySequence("Ctrl+I"))
+        add_image_action.setToolTip("Додати зображення (Ctrl+I)")
+        self.actions['add_image'] = add_image_action
+
+        save_action = QAction("Save", self)
+        save_action.setShortcut(QKeySequence.Save)
+        save_action.setToolTip("Сохранить шаблон (Ctrl+S)")
+        self.actions['save'] = save_action
+
+        load_action = QAction("Load", self)
+        load_action.setShortcut(QKeySequence.Open)
+        load_action.setToolTip("Загрузить шаблон (Ctrl+O)")
+        self.actions['load'] = load_action
+
+        export_action = QAction("Export ZPL", self)
+        export_action.setShortcut(QKeySequence("Ctrl+E"))
+        export_action.setToolTip("Экспорт в ZPL (Ctrl+E)")
+        self.actions['export'] = export_action
+
+        preview_action = QAction("Preview", self)
+        preview_action.setShortcut(QKeySequence("Ctrl+P"))
+        preview_action.setToolTip("Предпросмотр (Ctrl+P)")
+        self.actions['preview'] = preview_action
+
+        # Barcode group
+        barcode_menu = QMenu("Add Barcode", self)
+        add_ean13_action = QAction("EAN-13", self)
+        add_ean13_action.setToolTip("Добавить EAN-13 штрихкод")
+        barcode_menu.addAction(add_ean13_action)
+
+        add_code128_action = QAction("Code 128", self)
+        add_code128_action.setToolTip("Добавить Code 128 штрихкод")
+        barcode_menu.addAction(add_code128_action)
+
+        add_qrcode_action = QAction("QR Code", self)
+        add_qrcode_action.setToolTip("Добавить QR код")
+        barcode_menu.addAction(add_qrcode_action)
+
+        barcode_menu_action = QAction("Add Barcode", self)
+        barcode_menu_action.setToolTip("Добавить штрихкод")
+        barcode_menu_action.setMenu(barcode_menu)
+
+        self.menus['barcode'] = barcode_menu
+        self.actions['add_ean13'] = add_ean13_action
+        self.actions['add_code128'] = add_code128_action
+        self.actions['add_qrcode'] = add_qrcode_action
+        self.actions['barcode_menu'] = barcode_menu_action
+
+        # Shape group
+        shape_menu = QMenu("Add Shape", self)
+        add_rectangle_action = QAction("Rectangle", self)
+        add_rectangle_action.setToolTip("Добавить прямоугольник")
+        shape_menu.addAction(add_rectangle_action)
+
+        add_circle_action = QAction("Circle", self)
+        add_circle_action.setToolTip("Добавить круг")
+        shape_menu.addAction(add_circle_action)
+
+        add_line_action = QAction("Line", self)
+        add_line_action.setToolTip("Добавить линию")
+        shape_menu.addAction(add_line_action)
+
+        shape_menu_action = QAction("Add Shape", self)
+        shape_menu_action.setToolTip("Добавить фигуру")
+        shape_menu_action.setMenu(shape_menu)
+
+        self.menus['shape'] = shape_menu
+        self.actions['add_rectangle'] = add_rectangle_action
+        self.actions['add_circle'] = add_circle_action
+        self.actions['add_line'] = add_line_action
+        self.actions['shape_menu'] = shape_menu_action
+
+    def _create_menus(self):
+        """Create the main menu using existing actions."""
+
+        menubar = self.menuBar()
+        menubar.clear()
+
+        file_menu = menubar.addMenu("File")
+        file_menu.addAction(self.actions['save'])
+        file_menu.addAction(self.actions['load'])
+        file_menu.addSeparator()
+        file_menu.addAction(self.actions['export'])
+        file_menu.addAction(self.actions['preview'])
+
+        insert_menu = menubar.addMenu("Insert")
+        insert_menu.addAction(self.actions['add_text'])
+        insert_menu.addMenu(self.menus['barcode'])
+        insert_menu.addMenu(self.menus['shape'])
+        insert_menu.addAction(self.actions['add_image'])
     
     def _on_sidebar_element_selected(self, element_type: str):
         """
