@@ -306,8 +306,7 @@ class LineElement(BaseElement):
     def to_zpl(self, dpi=203):
         """Генерація ZPL команд для line
         
-        Horizontal/Vertical: ^GB{width},{height},{thickness}
-        Diagonal: ^GD{width},{height},{thickness},{color},{orientation}
+        Format: ^GD{width},{height},{thickness},{color},{orientation}
         """
         # Конвертувати координати mm -> dots
         x1_dots = int(self.config.x * dpi / 25.4)
@@ -329,46 +328,22 @@ class LineElement(BaseElement):
         # Color (B=black, W=white)
         color = 'B' if self.config.color == 'black' else 'W'
         
-        # КРИТИЧНО: Определить тип линии
-        is_horizontal = (height_dots == 0)
-        is_vertical = (width_dots == 0)
-        
-        if is_horizontal:
-            # ГОРИЗОНТАЛЬНАЯ линия: ^GB{width},{thickness},{thickness}
-            logger.debug(f"[SHAPE-ZPL-LINE] Type: HORIZONTAL, using ^GB")
-            zpl_commands = [
-                f"^FO{x1_dots},{y1_dots}",
-                f"^GB{width_dots},{thickness},{thickness},{color},0",
-                "^FS"
-            ]
-        elif is_vertical:
-            # ВЕРТИКАЛЬНАЯ линия: ^GB{thickness},{height},{thickness}
-            logger.debug(f"[SHAPE-ZPL-LINE] Type: VERTICAL, using ^GB")
-            zpl_commands = [
-                f"^FO{x1_dots},{y1_dots}",
-                f"^GB{thickness},{height_dots},{thickness},{color},0",
-                "^FS"
-            ]
+        # Orientation: L (left lean \), R (right lean /)
+        # Визначаємо за знаком (x2-x1) та (y2-y1)
+        if (x2_dots >= x1_dots and y2_dots >= y1_dots) or (x2_dots < x1_dots and y2_dots < y1_dots):
+            orientation = 'R'  # Right lean /
         else:
-            # ДИАГОНАЛЬНАЯ линия: ^GD
-            # Orientation: L (left lean \), R (right lean /)
-            dx = x2_dots - x1_dots
-            dy = y2_dots - y1_dots
-            
-            if dx * dy < 0:  # Разные знаки = /
-                orientation = 'R'
-            else:  # Одинаковые знаки = \
-                orientation = 'L'
-            
-            logger.debug(f"[SHAPE-ZPL-LINE] Type: DIAGONAL, orientation={orientation}, using ^GD")
-            
-            zpl_commands = [
-                f"^FO{x1_dots},{y1_dots}",
-                f"^GD{width_dots},{height_dots},{thickness},{color},{orientation}",
-                "^FS"
-            ]
+            orientation = 'L'  # Left lean \
         
-        logger.debug(f"[SHAPE-ZPL-LINE] Generated ZPL: {zpl_commands[1]}")
+        logger.debug(f"[SHAPE-ZPL-LINE] Thickness={thickness}, orientation={orientation}")
+        
+        zpl_commands = [
+            f"^FO{x1_dots},{y1_dots}",
+            f"^GD{width_dots},{height_dots},{thickness},{color},{orientation}",
+            "^FS"
+        ]
+        
+        logger.debug(f"[SHAPE-ZPL-LINE] Generated ZPL")
         return "\n".join(zpl_commands)
 
 
@@ -422,10 +397,7 @@ class GraphicsRectangleItem(QGraphicsRectItem):
             # Border
             thickness_px = self._mm_to_px(self.element.config.border_thickness)
             self.setBrush(QBrush(Qt.NoBrush))
-            # КРИТИЧНО: Встановити MiterJoin для ГОСТРИХ КУТІВ!
-            pen = QPen(color, thickness_px)
-            pen.setJoinStyle(Qt.MiterJoin)
-            self.setPen(pen)
+            self.setPen(QPen(color, thickness_px))
         
         logger.debug(f"[SHAPE-ITEM-RECT] Style updated: fill={self.element.config.fill}")
     
@@ -597,10 +569,7 @@ class GraphicsCircleItem(QGraphicsEllipseItem):
             # Border
             thickness_px = self._mm_to_px(self.element.config.border_thickness)
             self.setBrush(QBrush(Qt.NoBrush))
-            # КРИТИЧНО: Встановити MiterJoin для ГОСТРИХ КУТІВ!
-            pen = QPen(color, thickness_px)
-            pen.setJoinStyle(Qt.MiterJoin)
-            self.setPen(pen)
+            self.setPen(QPen(color, thickness_px))
         
         logger.debug(f"[SHAPE-ITEM-CIRCLE] Style updated: fill={self.element.config.fill}")
     
@@ -765,86 +734,72 @@ class GraphicsLineItem(QGraphicsLineItem):
         color = QColor('black') if self.element.config.color == 'black' else QColor('white')
         thickness_px = self._mm_to_px(self.element.config.thickness)
         
-        # КРИТИЧНО: Встановити MiterJoin для ГОСТРИХ КУТІВ!
-        pen = QPen(color, thickness_px)
-        pen.setJoinStyle(Qt.MiterJoin)
-        pen.setCapStyle(Qt.SquareCap)  # Square ends для Line
-        self.setPen(pen)
+        self.setPen(QPen(color, thickness_px))
         
         logger.debug(f"[SHAPE-ITEM-LINE] Style updated: thickness={self.element.config.thickness}mm")
     
     def itemChange(self, change, value):
-        """Snap to grid для ОБОИХ концов линии"""
+        """Перевизначити для snap to grid"""
         if change == QGraphicsItem.ItemPositionChange:
+            # Line має складнішу логіку snap - snap обох кінців
+            # Тут спрощена версія - snap тільки start point
             new_pos = value
-            
-            # Start point mm
-            x1_mm = self._px_to_mm(new_pos.x())
-            y1_mm = self._px_to_mm(new_pos.y())
-            
-            logger.debug(f"[LINE-DRAG] Start before snap: ({x1_mm:.2f}, {y1_mm:.2f})mm")
-            
-            # End point mm (absolute = start + vector)
-            line_vector = self.line()
-            x2_mm = self._px_to_mm(new_pos.x() + line_vector.x2())
-            y2_mm = self._px_to_mm(new_pos.y() + line_vector.y2())
-            
-            logger.debug(f"[LINE-DRAG] End before snap: ({x2_mm:.2f}, {y2_mm:.2f})mm")
-            
-            # EMIT cursor
+
+            x_mm = self._px_to_mm(new_pos.x())
+            y_mm = self._px_to_mm(new_pos.y())
+
+            logger.debug(
+                f"[ITEM-DRAG] Position changing: start -> ({x_mm:.2f}, {y_mm:.2f})mm"
+            )
+
+            # EMIT cursor position для rulers при drag
             if self.canvas:
-                self.canvas.cursor_position_changed.emit(x1_mm, y1_mm)
-            
+                logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
+                self.canvas.cursor_position_changed.emit(x_mm, y_mm)
+
             if self.snap_enabled:
-                # SNAP ОБОИХ КОНЦОВ!
-                snapped_x1 = self._snap_to_grid(x1_mm, 'x')
-                snapped_y1 = self._snap_to_grid(y1_mm, 'y')
-                snapped_x2 = self._snap_to_grid(x2_mm, 'x')
-                snapped_y2 = self._snap_to_grid(y2_mm, 'y')
-                
-                logger.debug(f"[LINE-SNAP] Start: ({x1_mm:.2f}, {y1_mm:.2f}) -> ({snapped_x1:.2f}, {snapped_y1:.2f})mm")
-                logger.debug(f"[LINE-SNAP] End: ({x2_mm:.2f}, {y2_mm:.2f}) -> ({snapped_x2:.2f}, {snapped_y2:.2f})mm")
-                
-                # Новая позиция start
+                snapped_x = self._snap_to_grid(x_mm, 'x')
+                snapped_y = self._snap_to_grid(y_mm, 'y')
+
                 snapped_pos = QPointF(
-                    self._mm_to_px(snapped_x1),
-                    self._mm_to_px(snapped_y1)
+                    self._mm_to_px(snapped_x),
+                    self._mm_to_px(snapped_y)
                 )
-                
-                # Новый вектор линии RELATIVE (snapped_end - snapped_start)
-                new_vector_x_px = self._mm_to_px(snapped_x2 - snapped_x1)
-                new_vector_y_px = self._mm_to_px(snapped_y2 - snapped_y1)
-                
-                # КРИТИЧНО: обновить line vector!
-                self.setLine(0, 0, new_vector_x_px, new_vector_y_px)
-                
-                logger.debug(f"[LINE-SNAP] New vector: ({new_vector_x_px:.2f}, {new_vector_y_px:.2f})px")
-                
+
                 return snapped_pos
-            
+
             return new_pos
-        
+
         elif change == QGraphicsItem.ItemPositionHasChanged:
-            # Сохранить snapped координаты
-            line_vector = self.line()
-            x1_mm = self._px_to_mm(self.pos().x())
-            y1_mm = self._px_to_mm(self.pos().y())
-            x2_mm = self._px_to_mm(self.pos().x() + line_vector.x2())
-            y2_mm = self._px_to_mm(self.pos().y() + line_vector.y2())
-            
-            logger.debug(f"[LINE-FINAL] Start: ({x1_mm:.2f}, {y1_mm:.2f})mm")
-            logger.debug(f"[LINE-FINAL] End: ({x2_mm:.2f}, {y2_mm:.2f})mm")
-            
+            # Оновити config після переміщення
+            # Line config зберігає абсолютні координати
+            line_in_scene = self.line()
+            x1_mm = self._px_to_mm(line_in_scene.x1() + self.pos().x())
+            y1_mm = self._px_to_mm(line_in_scene.y1() + self.pos().y())
+            x2_mm = self._px_to_mm(line_in_scene.x2() + self.pos().x())
+            y2_mm = self._px_to_mm(line_in_scene.y2() + self.pos().y())
+
+            logger.debug(
+                f"[ITEM-DRAG] Position changed (line): start=({x1_mm:.2f}, {y1_mm:.2f})mm, "
+                f"end=({x2_mm:.2f}, {y2_mm:.2f})mm"
+            )
+
             self.element.config.x = x1_mm
             self.element.config.y = y1_mm
             self.element.config.x2 = x2_mm
             self.element.config.y2 = y2_mm
-            
-            logger.debug(f"[LINE-FINAL] Saved: start=({x1_mm:.2f}, {y1_mm:.2f}), end=({x2_mm:.2f}, {y2_mm:.2f})mm")
-            
-            if self.canvas and getattr(self.canvas, 'bounds_update_callback', None) and self.isSelected():
+
+            if (
+                self.canvas
+                and getattr(self.canvas, 'bounds_update_callback', None)
+                and self.isSelected()
+            ):
+                logger.debug(
+                    f"[ITEM-DRAG] Position changed: bounds update needed "
+                    f"start=({self.element.config.x:.2f}, {self.element.config.y:.2f})mm"
+                )
                 self.canvas.bounds_update_callback(self)
-        
+
         return super().itemChange(change, value)
 
     def _snap_to_grid(self, value_mm, axis='x'):

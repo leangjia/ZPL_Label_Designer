@@ -38,11 +38,14 @@ class MainWindow(QMainWindow,
                  UIHelpersMixin):
     """Главное окно редактора"""
     
-    def __init__(self):
+    def __init__(self, template_file=None):
         super().__init__()
         self.setWindowTitle("ZPL Label Designer")
         self.resize(1200, 700)
         logger.info("MainWindow initialized")
+        
+        # Сохраняем путь к файлу шаблона для загрузки после инициализации UI
+        self._template_file_to_load = template_file
         
         # Список элементов и графических элементов
         self.elements = []
@@ -152,6 +155,10 @@ class MainWindow(QMainWindow,
         self._setup_shortcuts()
         
         logger.info("MainWindow fully initialized")
+        
+        # Загружаем шаблон из файла если передан
+        if self._template_file_to_load:
+            self._load_template_from_file(self._template_file_to_load)
     
     def _connect_signals(self):
         """Connect all signals"""
@@ -179,6 +186,7 @@ class MainWindow(QMainWindow,
         self.actions['save'].triggered.connect(self._save_template)
         self.actions['load'].triggered.connect(self._load_template)
         self.actions['export'].triggered.connect(self._export_zpl)
+        self.actions['open_json'].triggered.connect(self._open_json)
         self.actions['preview'].triggered.connect(self._show_preview)
         self.actions['grid_settings'].triggered.connect(self._show_grid_settings)
 
@@ -220,6 +228,10 @@ class MainWindow(QMainWindow,
         preview_action.setShortcut(QKeySequence("Ctrl+P"))
         preview_action.setToolTip("Предпросмотр (Ctrl+P)")
         self.actions['preview'] = preview_action
+
+        open_json_action = QAction("Open JSON", self)
+        open_json_action.setToolTip("Показати JSON шаблону")
+        self.actions['open_json'] = open_json_action
 
         # Grid Settings
         grid_settings_action = QAction("Grid Settings...", self)
@@ -285,6 +297,7 @@ class MainWindow(QMainWindow,
         file_menu.addAction(self.actions['load'])
         file_menu.addSeparator()
         file_menu.addAction(self.actions['export'])
+        file_menu.addAction(self.actions['open_json'])
         file_menu.addAction(self.actions['preview'])
 
         insert_menu = menubar.addMenu("Insert")

@@ -2,7 +2,7 @@
 """Mixin для template операцій"""
 
 from PySide6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QTextEdit, QFileDialog, QLabel
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QFont
 from PySide6.QtCore import Qt
 from io import BytesIO
 from datetime import datetime
@@ -17,6 +17,83 @@ from core.elements.barcode_element import BarcodeElement, GraphicsBarcodeItem
 
 class TemplateMixin:
     """Template save/load and ZPL export operations"""
+    
+    def _load_template_from_file(self, filepath):
+        """Завантажити шаблон з файлу (для 1С інтеграції) - ЗАГРУЖАЄ В CANVAS"""
+        try:
+            logger.info(f"[1C-IMPORT] Loading template from: {filepath}")
+            
+            # Використовуємо TemplateManager для парсингу (як у _load_template)
+            template_data = self.template_manager.load_template(filepath)
+            logger.info(f"[1C-IMPORT] Template loaded: {template_data.get('name', 'unnamed')}")
+            
+            # Apply grid config (зворотна сумісність)
+            label_config = template_data['label_config']
+            if 'grid' in label_config:
+                from config import GridConfig, SnapMode
+                grid_data = label_config['grid']
+                grid_config = GridConfig(
+                    size_x_mm=grid_data.get('size_x_mm', 1.0),
+                    size_y_mm=grid_data.get('size_y_mm', 1.0),
+                    offset_x_mm=grid_data.get('offset_x_mm', 0.0),
+                    offset_y_mm=grid_data.get('offset_y_mm', 0.0),
+                    visible=grid_data.get('visible', True),
+                    snap_mode=SnapMode(grid_data.get('snap_mode', 'grid'))
+                )
+                self.canvas.set_grid_config(grid_config)
+                logger.debug(f"[1C-IMPORT] Loaded grid: Size X={grid_config.size_x_mm}mm")
+            else:
+                # Старі template без grid - defaults
+                from config import GridConfig
+                self.canvas.set_grid_config(GridConfig())
+            
+            # Очищуємо canvas
+            self.canvas.clear_and_redraw_grid()
+            self.elements.clear()
+            self.graphics_items.clear()
+            logger.info("[1C-IMPORT] Canvas cleared")
+            
+            # Встановлюємо units
+            display_unit = template_data.get('display_unit', MeasurementUnit.MM)
+            index = self.units_combobox.findData(display_unit)
+            if index >= 0:
+                self.units_combobox.setCurrentIndex(index)
+            logger.info(f"[1C-IMPORT] Applied display_unit: {display_unit.value}")
+            
+            # Встановлюємо label size
+            width_mm = label_config.get('width_mm', 28)
+            height_mm = label_config.get('height_mm', 28)
+            
+            if width_mm != self.canvas.width_mm or height_mm != self.canvas.height_mm:
+                self.canvas.set_label_size(width_mm, height_mm)
+                self.width_spinbox.blockSignals(True)
+                self.height_spinbox.blockSignals(True)
+                self.width_spinbox.setValue(width_mm)
+                self.height_spinbox.setValue(height_mm)
+                self.width_spinbox.blockSignals(False)
+                self.height_spinbox.blockSignals(False)
+                logger.info(f"[1C-IMPORT] Label size set: {width_mm}x{height_mm}mm")
+            
+            # Завантажуємо елементи
+            for element in template_data['elements']:
+                if isinstance(element, TextElement):
+                    graphics_item = GraphicsTextItem(element, dpi=self.canvas.dpi)
+                elif isinstance(element, BarcodeElement):
+                    graphics_item = GraphicsBarcodeItem(element, dpi=self.canvas.dpi)
+                elif isinstance(element, ImageElement):
+                    graphics_item = GraphicsImageItem(element, dpi=self.canvas.dpi)
+                else:
+                    continue
+                
+                self.canvas.scene.addItem(graphics_item)
+                self.elements.append(element)
+                self.graphics_items.append(graphics_item)
+            
+            logger.info(f"[1C-IMPORT] Template loaded successfully: {len(self.elements)} elements")
+        
+        except Exception as e:
+            logger.error(f"[1C-IMPORT] Failed to load: {e}", exc_info=True)
+            QMessageBox.critical(self, "Import Error", f"Помилка завантаження:\n{e}")
     
     def _export_zpl(self):
         """Экспорт в ZPL"""
@@ -50,6 +127,72 @@ class TemplateMixin:
         dialog.exec()
         
         logger.info("ZPL export dialog shown")
+    
+    def _open_json(self):
+        """Показати JSON template в діалозі"""
+        if not self.elements:
+            logger.warning("Open JSON: No elements to show")
+            QMessageBox.warning(self, "Open JSON", "No elements on canvas")
+            return
+        
+        try:
+            # Генеруємо JSON (копіюємо логіку з _save_template)
+            from datetime import datetime
+            import json
+            
+            template_data = {
+                "name": "Current Template",
+                "version": "1.0",
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+                "label_config": {
+                    "width_mm": self.canvas.width_mm,
+                    "height_mm": self.canvas.height_mm,
+                    "dpi": self.canvas.dpi,
+                    "display_unit": self.current_unit.value,
+                    "grid": {
+                        "size_x_mm": self.canvas.grid_config.size_x_mm,
+                        "size_y_mm": self.canvas.grid_config.size_y_mm,
+                        "offset_x_mm": self.canvas.grid_config.offset_x_mm,
+                        "offset_y_mm": self.canvas.grid_config.offset_y_mm,
+                        "visible": self.canvas.grid_config.visible,
+                        "snap_mode": self.canvas.grid_config.snap_mode.value
+                    }
+                },
+                "elements": [element.to_dict() for element in self.elements],
+                "metadata": {
+                    "elements_count": len(self.elements),
+                    "application": "ZPL Label Designer 1.0"
+                }
+            }
+            
+            # Форматуємо JSON
+            json_str = json.dumps(template_data, indent=2, ensure_ascii=False)
+            logger.info(f"[OPEN-JSON] Generated JSON: {len(json_str)} chars")
+            
+            # Показуємо діалог (ЯК Export ZPL!)
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Template JSON")
+            dialog.resize(700, 500)
+            
+            layout = QVBoxLayout()
+            text_edit = QTextEdit()
+            text_edit.setPlainText(json_str)
+            text_edit.setReadOnly(True)
+            
+            # Моноширинний шрифт для JSON
+            font = QFont("Courier New", 10)
+            text_edit.setFont(font)
+            
+            layout.addWidget(text_edit)
+            dialog.setLayout(layout)
+            
+            dialog.exec()
+            logger.info("[OPEN-JSON] Dialog shown")
+            
+        except Exception as e:
+            logger.error(f"[OPEN-JSON] Error: {e}", exc_info=True)
+            QMessageBox.critical(self, "Open JSON Error", f"Failed to generate JSON:\n{e}")
     
     def _save_template(self):
         """Сохранить шаблон в JSON"""

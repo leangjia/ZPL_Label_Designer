@@ -2,11 +2,12 @@
 """Панель свойств элемента"""
 
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, 
-                               QSpinBox, QDoubleSpinBox, QGroupBox, QFormLayout)
+                               QSpinBox, QDoubleSpinBox, QGroupBox, QFormLayout, QComboBox)
 from PySide6.QtCore import Signal
 from utils.logger import logger
 from utils.unit_converter import UnitConverter
 from config import UNIT_DECIMALS, UNIT_STEPS
+from core.elements.text_element import ZplFont
 
 class PropertyPanel(QWidget):
     """Панель свойств выбранного элемента"""
@@ -61,6 +62,13 @@ class PropertyPanel(QWidget):
         )
         text_form.addRow("Text:", self.text_input)
         
+        # Font Family dropdown
+        self.font_family_combo = QComboBox()
+        for font in ZplFont:
+            self.font_family_combo.addItem(font.display_name, font)
+        self.font_family_combo.currentIndexChanged.connect(self._on_font_family_changed)
+        text_form.addRow("Font:", self.font_family_combo)
+        
         self.font_size_input = QSpinBox()
         self.font_size_input.setRange(10, 100)
         self.font_size_input.valueChanged.connect(
@@ -111,12 +119,22 @@ class PropertyPanel(QWidget):
         barcode_form.addRow("Data:", self.barcode_data_input)
         
         self.barcode_width_input = QSpinBox()
-        self.barcode_width_input.setRange(20, 100)
+        self.barcode_width_input.setRange(10, 100)
         self.barcode_width_input.setSuffix(" mm")
-        self.barcode_width_input.valueChanged.connect(
-            lambda v: self._on_property_change('barcode_width', v)
-        )
+        self.barcode_width_input.setReadOnly(True)  # READ-ONLY! Width вичисляється автоматично
+        self.barcode_width_input.setStyleSheet("QSpinBox { background-color: #f0f0f0; }")
+        self.barcode_width_input.setToolTip("Width calculated automatically based on Module Width")
         barcode_form.addRow("Width:", self.barcode_width_input)
+        
+        # КРИТИЧНО: Module Width для контролю реальної ширини!
+        self.barcode_module_width_input = QSpinBox()
+        self.barcode_module_width_input.setRange(1, 5)
+        self.barcode_module_width_input.setSuffix(" dots")
+        self.barcode_module_width_input.setToolTip("Module width (^BY parameter). Smaller = narrower barcode.")
+        self.barcode_module_width_input.valueChanged.connect(
+            lambda v: self._on_property_change('barcode_module_width', v)
+        )
+        barcode_form.addRow("Module Width:", self.barcode_module_width_input)
         
         self.barcode_height_input = QSpinBox()
         self.barcode_height_input.setRange(10, 100)
@@ -143,6 +161,17 @@ class PropertyPanel(QWidget):
         
         self.shape_type_label = QLabel()
         shape_form.addRow("Type:", self.shape_type_label)
+        
+        # Diameter field (тільки для Circle коли is_circle=True)
+        self.shape_diameter_input = QDoubleSpinBox()
+        self.shape_diameter_input.setRange(1, 100)
+        self.shape_diameter_input.setDecimals(1)
+        self.shape_diameter_input.setSingleStep(0.5)
+        self.shape_diameter_input.setSuffix(" mm")
+        self.shape_diameter_input.valueChanged.connect(
+            lambda v: self._on_property_change('circle_diameter', v)
+        )
+        shape_form.addRow("Diameter:", self.shape_diameter_input)
         
         self.shape_width_input = QDoubleSpinBox()
         self.shape_width_input.setRange(1, 100)
@@ -181,9 +210,37 @@ class PropertyPanel(QWidget):
         )
         shape_form.addRow("Thickness:", self.shape_thickness_input)
         
+        # End Position fields (only for Line)
+        self.line_end_x_input = QDoubleSpinBox()
+        self.line_end_x_input.setRange(0, 100)
+        self.line_end_x_input.setDecimals(1)
+        self.line_end_x_input.setSingleStep(0.5)
+        self.line_end_x_input.setSuffix(" mm")
+        self.line_end_x_input.valueChanged.connect(
+            lambda v: self._on_property_change('line_end_x', v)
+        )
+        shape_form.addRow("End X:", self.line_end_x_input)
+        
+        self.line_end_y_input = QDoubleSpinBox()
+        self.line_end_y_input.setRange(0, 100)
+        self.line_end_y_input.setDecimals(1)
+        self.line_end_y_input.setSingleStep(0.5)
+        self.line_end_y_input.setSuffix(" mm")
+        self.line_end_y_input.valueChanged.connect(
+            lambda v: self._on_property_change('line_end_y', v)
+        )
+        shape_form.addRow("End Y:", self.line_end_y_input)
+        
         shape_group.setLayout(shape_form)
         shape_group.setVisible(False)
         self.shape_group = shape_group
+        
+        # Сховати End X, End Y за замовчуванням (тільки для Line)
+        self.line_end_x_input.setVisible(False)
+        self.line_end_y_input.setVisible(False)
+        
+        # Сховати Diameter за замовчуванням (тільки для Circle коли is_circle=True)
+        self.shape_diameter_input.setVisible(False)
         
         # === IMAGE PROPERTIES ===
         image_group = QGroupBox("Image Properties")
@@ -291,6 +348,16 @@ class PropertyPanel(QWidget):
                 self.shape_group.setVisible(False)
                 
                 self.text_input.setText(element.text)
+                
+                # Font Family dropdown
+                font = element.font_family
+                for i in range(self.font_family_combo.count()):
+                    if self.font_family_combo.itemData(i) == font:
+                        self.font_family_combo.blockSignals(True)
+                        self.font_family_combo.setCurrentIndex(i)
+                        self.font_family_combo.blockSignals(False)
+                        break
+                
                 self.font_size_input.setValue(element.font_size)
                 self.placeholder_input.setText(
                     element.data_field if element.data_field else ""
@@ -309,8 +376,26 @@ class PropertyPanel(QWidget):
                 
                 self.barcode_type_label.setText(element.barcode_type)
                 self.barcode_data_input.setText(element.data)
-                self.barcode_width_input.setValue(int(element.width))
+                
+                # КРИТИЧНО: Використовувати REAL width!
+                if hasattr(element, 'calculate_real_width'):
+                    real_width = element.calculate_real_width(dpi=203)
+                    self.barcode_width_input.setValue(int(real_width))
+                    logger.debug(f"[PROP-BARCODE] Width (REAL): {real_width:.1f}mm")
+                else:
+                    self.barcode_width_input.setValue(int(element.width))
+                    logger.debug(f"[PROP-BARCODE] Width (element): {element.width}mm")
+                
                 self.barcode_height_input.setValue(int(element.height))
+                
+                # КРИТИЧНО: Встановити module_width!
+                if hasattr(element, 'module_width'):
+                    self.barcode_module_width_input.setValue(element.module_width)
+                    logger.debug(f"[PROP-BARCODE] Module width: {element.module_width} dots")
+                else:
+                    self.barcode_module_width_input.setValue(2)  # default
+                    logger.debug(f"[PROP-BARCODE] Module width: 2 dots (default)")
+                
                 self.barcode_placeholder_input.setText(
                     element.data_field if element.data_field else ""
                 )
@@ -334,36 +419,121 @@ class PropertyPanel(QWidget):
                 
                 logger.debug(f"[PROP-IMAGE] Set properties: {element.config.width}x{element.config.height}mm")
             
-            elif isinstance(element, (RectangleElement, CircleElement)):
-                # Показать только Shape Properties
+            elif isinstance(element, RectangleElement):
+                # Rectangle: показать Width/Height/Fill/Thickness
                 self.text_group.setVisible(False)
                 self.barcode_group.setVisible(False)
                 self.shape_group.setVisible(True)
+                self.image_group.setVisible(False)
                 
-                shape_type = "Rectangle" if isinstance(element, RectangleElement) else "Circle"
-                self.shape_type_label.setText(shape_type)
+                self.shape_type_label.setText("Rectangle")
+                
+                # Сховати Diameter, показати Width/Height
+                self.shape_diameter_input.setVisible(False)
+                self.shape_width_input.setVisible(True)
+                self.shape_height_input.setVisible(True)
+                self.shape_fill_input.setVisible(True)
+                self.line_end_x_input.setVisible(False)
+                self.line_end_y_input.setVisible(False)
+                
                 self.shape_width_input.setValue(element.config.width)
                 self.shape_height_input.setValue(element.config.height)
                 self.shape_fill_input.setChecked(element.config.fill)
                 self.shape_thickness_input.setValue(element.config.border_thickness)
             
-            elif isinstance(element, LineElement):
-                # Line немає width/height, тільки thickness
-                # Показати Shape Properties без width/height
+            elif isinstance(element, CircleElement):
+                # Circle: динамічне переключення Diameter ↔ Width/Height
                 self.text_group.setVisible(False)
                 self.barcode_group.setVisible(False)
                 self.shape_group.setVisible(True)
+                self.image_group.setVisible(False)
+                
+                # Сховати End X/End Y (для Line)
+                self.line_end_x_input.setVisible(False)
+                self.line_end_y_input.setVisible(False)
+                
+                logger.debug(f"[PROP-PANEL] Update circle: is_circle={element.is_circle}")
+                
+                if element.is_circle:
+                    # КОЛО: показати тільки Diameter
+                    self.shape_type_label.setText("Circle")
+                    logger.debug(f"[PROP-PANEL] Showing DIAMETER field")
+                    
+                    self.shape_diameter_input.setVisible(True)
+                    self.shape_width_input.setVisible(False)
+                    self.shape_height_input.setVisible(False)
+                    
+                    self.shape_diameter_input.blockSignals(True)
+                    self.shape_diameter_input.setValue(element.diameter)
+                    self.shape_diameter_input.blockSignals(False)
+                else:
+                    # ЕЛІПС: показати Width і Height
+                    self.shape_type_label.setText("Ellipse")
+                    logger.debug(f"[PROP-PANEL] Showing WIDTH/HEIGHT fields")
+                    
+                    self.shape_diameter_input.setVisible(False)
+                    self.shape_width_input.setVisible(True)
+                    self.shape_height_input.setVisible(True)
+                    
+                    self.shape_width_input.blockSignals(True)
+                    self.shape_height_input.blockSignals(True)
+                    self.shape_width_input.setValue(element.config.width)
+                    self.shape_height_input.setValue(element.config.height)
+                    self.shape_width_input.blockSignals(False)
+                    self.shape_height_input.blockSignals(False)
+                
+                # Fill і Thickness показуємо завжди
+                self.shape_fill_input.setVisible(True)
+                self.shape_fill_input.setChecked(element.config.fill)
+                self.shape_thickness_input.setValue(element.config.border_thickness)
+            
+            elif isinstance(element, LineElement):
+                # Line: показати Position (X,Y), End Position (End X, End Y), Thickness
+                self.text_group.setVisible(False)
+                self.barcode_group.setVisible(False)
+                self.shape_group.setVisible(True)
+                self.image_group.setVisible(False)
                 
                 self.shape_type_label.setText("Line")
+                
+                # Сховати Width/Height/Fill
                 self.shape_width_input.setVisible(False)
                 self.shape_height_input.setVisible(False)
                 self.shape_fill_input.setVisible(False)
+                
+                # Показати End X, End Y
+                self.line_end_x_input.setVisible(True)
+                self.line_end_y_input.setVisible(True)
+                
+                # Встановити значення
                 self.shape_thickness_input.setValue(element.config.thickness)
+                
+                # Конвертувати end position з MM в current unit
+                end_x_display = UnitConverter.mm_to_unit(element.config.x2, current_unit)
+                end_y_display = UnitConverter.mm_to_unit(element.config.y2, current_unit)
+                
+                self.line_end_x_input.blockSignals(True)
+                self.line_end_x_input.setDecimals(decimals)
+                self.line_end_x_input.setSingleStep(step)
+                self.line_end_x_input.setSuffix(f" {current_unit.value}")
+                self.line_end_x_input.setValue(end_x_display)
+                self.line_end_x_input.blockSignals(False)
+                
+                self.line_end_y_input.blockSignals(True)
+                self.line_end_y_input.setDecimals(decimals)
+                self.line_end_y_input.setSingleStep(step)
+                self.line_end_y_input.setSuffix(f" {current_unit.value}")
+                self.line_end_y_input.setValue(end_y_display)
+                self.line_end_y_input.blockSignals(False)
+                
+                logger.debug(f"[PROP-LINE] End position: ({element.config.x2:.2f}, {element.config.y2:.2f})mm")
             else:
-                # Відновити width/height якщо були приховані
+                # Відновити width/height, сховати End X/End Y
                 self.shape_width_input.setVisible(True)
                 self.shape_height_input.setVisible(True)
                 self.shape_fill_input.setVisible(True)
+                self.line_end_x_input.setVisible(False)
+                self.line_end_y_input.setVisible(False)
             
             self.blockSignals(False)
         else:
@@ -426,11 +596,37 @@ class PropertyPanel(QWidget):
         
         elif prop_name == 'barcode_data':
             self.current_element.data = value
+            
+            # КРИТИЧНО: При зміні data для CODE128 - пересчитати width!
+            if hasattr(self.current_element, 'calculate_real_width'):
+                real_width = self.current_element.calculate_real_width(dpi=203)
+                self.barcode_width_input.blockSignals(True)
+                self.barcode_width_input.setValue(int(real_width))
+                self.barcode_width_input.blockSignals(False)
+                
+                if self.current_graphics_item:
+                    self.current_graphics_item.update_size(real_width, self.current_element.height)
+                
+                logger.debug(f"[PROP-BARCODE] Data changed, new width: {real_width:.1f}mm")
         
-        elif prop_name == 'barcode_width':
-            self.current_element.width = value
-            if self.current_graphics_item:
-                self.current_graphics_item.update_size(value, self.current_element.height)
+        elif prop_name == 'barcode_module_width':
+            # КРИТИЧНО: Зміна module_width впливає на реальну ширину!
+            if hasattr(self.current_element, 'module_width'):
+                self.current_element.module_width = value
+                
+                # Пересчитати REAL width
+                real_width = self.current_element.calculate_real_width(dpi=203)
+                
+                # Оновити PropertyPanel width без сигналу
+                self.barcode_width_input.blockSignals(True)
+                self.barcode_width_input.setValue(int(real_width))
+                self.barcode_width_input.blockSignals(False)
+                
+                # Оновити GraphicsItem
+                if self.current_graphics_item:
+                    self.current_graphics_item.update_size(real_width, self.current_element.height)
+                
+                logger.debug(f"[PROP-BARCODE] Module width changed: {value} dots -> {real_width:.1f}mm")
         
         elif prop_name == 'barcode_height':
             self.current_element.height = value
@@ -440,15 +636,74 @@ class PropertyPanel(QWidget):
         elif prop_name == 'barcode_data_field':
             self.current_element.data_field = value
         
+        elif prop_name == 'circle_diameter':
+            # Circle diameter змінено
+            from core.elements.shape_element import CircleElement
+            
+            if isinstance(self.current_element, CircleElement):
+                old_is_circle = self.current_element.is_circle
+                self.current_element.diameter = value
+                new_is_circle = self.current_element.is_circle
+                
+                logger.debug(f"[PROP-PANEL] Diameter changed: {value:.2f}mm")
+                
+                # Оновити graphics item
+                if self.current_graphics_item and hasattr(self.current_graphics_item, 'update_from_element'):
+                    self.current_graphics_item.update_from_element()
+                
+                # Перевірити чи форма змінилася (diameter завжди is_circle=True)
+                if old_is_circle == new_is_circle:
+                    logger.debug(f"[PROP-PANEL] Shape unchanged, no panel refresh")
+        
         elif prop_name == 'shape_width':
-            self.current_element.config.width = value
-            if self.current_graphics_item and hasattr(self.current_graphics_item, 'update_from_element'):
-                self.current_graphics_item.update_from_element()
+            from core.elements.shape_element import CircleElement
+            
+            if isinstance(self.current_element, CircleElement):
+                # Circle: використовуємо set_width() для детекції переключення
+                old_is_circle = self.current_element.is_circle
+                self.current_element.set_width(value)
+                new_is_circle = self.current_element.is_circle
+                
+                logger.debug(f"[PROP-PANEL] Width changed: {value:.2f}mm")
+                
+                # Оновити graphics item
+                if self.current_graphics_item and hasattr(self.current_graphics_item, 'update_from_element'):
+                    self.current_graphics_item.update_from_element()
+                
+                # Якщо став Ellipse → перерисувати panel
+                if old_is_circle and not new_is_circle:
+                    logger.info(f"[PROP-PANEL] Circle -> Ellipse, refreshing panel")
+                    self.set_element(self.current_element, self.current_graphics_item)
+            else:
+                # Rectangle або інші елементи
+                self.current_element.config.width = value
+                if self.current_graphics_item and hasattr(self.current_graphics_item, 'update_from_element'):
+                    self.current_graphics_item.update_from_element()
         
         elif prop_name == 'shape_height':
-            self.current_element.config.height = value
-            if self.current_graphics_item and hasattr(self.current_graphics_item, 'update_from_element'):
-                self.current_graphics_item.update_from_element()
+            from core.elements.shape_element import CircleElement
+            
+            if isinstance(self.current_element, CircleElement):
+                # Circle: використовуємо set_height() для детекції переключення
+                old_is_circle = self.current_element.is_circle
+                self.current_element.set_height(value)
+                new_is_circle = self.current_element.is_circle
+                
+                logger.debug(f"[PROP-PANEL] Height changed: {value:.2f}mm")
+                
+                # Оновити graphics item
+                if self.current_graphics_item and hasattr(self.current_graphics_item, 'update_from_element'):
+                    self.current_graphics_item.update_from_element()
+                
+                # Якщо став Circle → перерисувати panel
+                if not old_is_circle and new_is_circle:
+                    logger.info(f"[PROP-PANEL] Ellipse -> Circle, refreshing panel")
+                    self.set_element(self.current_element, self.current_graphics_item)
+            else:
+                # Rectangle або інші елементи
+                self.current_element.config.height = value
+                if self.current_graphics_item and hasattr(self.current_graphics_item, 'update_from_element'):
+                    self.current_graphics_item.update_from_element()
         
         elif prop_name == 'shape_fill':
             self.current_element.config.fill = value
@@ -461,6 +716,26 @@ class PropertyPanel(QWidget):
             elif hasattr(self.current_element.config, 'thickness'):
                 # Line element
                 self.current_element.config.thickness = value
+            if self.current_graphics_item and hasattr(self.current_graphics_item, 'update_from_element'):
+                self.current_graphics_item.update_from_element()
+        
+        elif prop_name == 'line_end_x':
+            # Line End X - конвертувати з current unit в MM
+            end_x_mm = UnitConverter.unit_to_mm(value, current_unit)
+            self.current_element.config.x2 = end_x_mm
+            
+            logger.debug(f"[PROP-LINE] End X changed: {value:.2f}{current_unit.value} = {end_x_mm:.2f}mm")
+            
+            if self.current_graphics_item and hasattr(self.current_graphics_item, 'update_from_element'):
+                self.current_graphics_item.update_from_element()
+        
+        elif prop_name == 'line_end_y':
+            # Line End Y - конвертувати з current unit в MM
+            end_y_mm = UnitConverter.unit_to_mm(value, current_unit)
+            self.current_element.config.y2 = end_y_mm
+            
+            logger.debug(f"[PROP-LINE] End Y changed: {value:.2f}{current_unit.value} = {end_y_mm:.2f}mm")
+            
             if self.current_graphics_item and hasattr(self.current_graphics_item, 'update_from_element'):
                 self.current_graphics_item.update_from_element()
         
@@ -504,6 +779,25 @@ class PropertyPanel(QWidget):
                 self.current_graphics_item.update_display()
             
             logger.debug(f"[PROP-PANEL] Underline changed: {self.current_element.underline}")
+    
+    def _on_font_family_changed(self, index):
+        """Обробник зміни font family"""
+        if not self.current_element or not hasattr(self.current_element, 'font_family'):
+            return
+        
+        font = self.font_family_combo.currentData()  # ZplFont enum
+        
+        logger.debug(f"[PROP-PANEL] Font family changed: {font.zpl_code} ({font.display_name})")
+        
+        # Оновити element
+        self.current_element.font_family = font
+        
+        # Оновити Canvas візуалізацію
+        if self.current_graphics_item and hasattr(self.current_graphics_item, 'update_font_family'):
+            self.current_graphics_item.update_font_family()
+            logger.debug(f"[PROP-PANEL] Graphics item font updated")
+        
+        logger.debug(f"[PROP-PANEL] Element font_family updated to {self.current_element.font_family.zpl_code}")
     
     def _on_image_width_changed(self, value):
         """Оновити ширину зображення"""

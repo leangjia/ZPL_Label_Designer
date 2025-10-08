@@ -14,7 +14,13 @@ def main():
         app.setApplicationName("ZPL Label Designer")
         logger.info("Qt Application created")
         
-        window = MainWindow()
+        # Проверяем параметры командной строки
+        template_file = None
+        if len(sys.argv) > 1:
+            template_file = sys.argv[1]
+            logger.info(f"Template file from command line: {template_file}")
+        
+        window = MainWindow(template_file=template_file)
         window.show()
         logger.info("Main window shown")
         

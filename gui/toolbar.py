@@ -62,3 +62,7 @@ class EditorToolbar(QToolBar):
         # Preview
         self.preview_action = self.actions['preview']
         self.addAction(self.preview_action)
+
+        # Open JSON
+        self.open_json_action = self.actions['open_json']
+        self.addAction(self.open_json_action)

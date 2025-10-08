@@ -1,0 +1,101 @@
+{
+  "name": "1 СОРТ ИНТУИЦИЯ",
+  "version": "1.0",
+  "created_at": "2025-10-08T04:10:37.399913",
+  "updated_at": "2025-10-08T04:10:37.399938",
+  "label_config": {
+    "width_mm": 28.0,
+    "height_mm": 28.0,
+    "dpi": 203,
+    "display_unit": "mm"
+  },
+  "elements": [
+    {
+      "type": "text",
+      "x": 1.0000000000000002,
+      "y": 0.6496551724137932,
+      "text": "ACTIVITY 20",
+      "font_size": 18,
+      "font_family": "0",
+      "data_field": "{{Модель}}",
+      "bold": true,
+      "italic": false,
+      "underline": false
+    },
+    {
+      "type": "text",
+      "x": 1.0,
+      "y": 4.0,
+      "text": "Розмір",
+      "font_size": 14,
+      "font_family": "0",
+      "data_field": null,
+      "bold": true,
+      "italic": false,
+      "underline": false
+    },
+    {
+      "type": "barcode",
+      "barcode_type": "EAN13",
+      "x": 3.0,
+      "y": 6.0,
+      "data": "4820023717633",
+      "width": 26.275862068965516,
+      "height": 10,
+      "data_field": "{{Штрихкод}}",
+      "show_text": true
+    },
+    {
+      "type": "text",
+      "x": 12.0,
+      "y": 4.0,
+      "text": "New Text",
+      "font_size": 14,
+      "font_family": "0",
+      "data_field": "{{Размер}}",
+      "bold": true,
+      "italic": false,
+      "underline": false
+    },
+    {
+      "type": "text",
+      "x": 1.0,
+      "y": 19.0,
+      "text": "New Text",
+      "font_size": 12,
+      "font_family": "0",
+      "data_field": "{{Цвет}}",
+      "bold": true,
+      "italic": false,
+      "underline": false
+    },
+    {
+      "type": "text",
+      "x": 1.0,
+      "y": 22.0,
+      "text": "Дата виготов. та номер партii: ",
+      "font_size": 11,
+      "font_family": "0",
+      "data_field": null,
+      "bold": false,
+      "italic": false,
+      "underline": false
+    },
+    {
+      "type": "text",
+      "x": 2.0,
+      "y": 24.0,
+      "text": "New Text",
+      "font_size": 12,
+      "font_family": "0",
+      "data_field": "{{ТекущаяДата}}",
+      "bold": true,
+      "italic": false,
+      "underline": false
+    }
+  ],
+  "metadata": {
+    "elements_count": 7,
+    "application": "ZPL Label Designer 1.0"
+  }
+}

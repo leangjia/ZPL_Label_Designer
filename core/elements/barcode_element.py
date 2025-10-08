@@ -66,7 +66,16 @@ class GraphicsBarcodeItem(QGraphicsRectItem):
     """Графический элемент штрихкода"""
     
     def __init__(self, element: BarcodeElement, dpi=203, canvas=None):
-        width_px = int(element.width * dpi / 25.4)
+        # КРИТИЧНО: Використовувати РЕАЛЬНУ ширину замість element.width!
+        if hasattr(element, 'calculate_real_width'):
+            real_width_mm = element.calculate_real_width(dpi)
+            width_px = int(real_width_mm * dpi / 25.4)
+            logger.debug(f"[BARCODE-ITEM] Using REAL width: {real_width_mm:.1f}mm -> {width_px}px")
+        else:
+            # Fallback для QRCode та інших
+            width_px = int(element.width * dpi / 25.4)
+            logger.debug(f"[BARCODE-ITEM] Using element.width: {element.width}mm -> {width_px}px")
+        
         height_px = int(element.height * dpi / 25.4)
         
         super().__init__(0, 0, width_px, height_px)
@@ -213,7 +222,14 @@ class GraphicsBarcodeItem(QGraphicsRectItem):
         self.element.width = width
         self.element.height = height
         
-        width_px = self._mm_to_px(width)
+        # КРИТИЧНО: Використовувати РЕАЛЬНУ ширину!
+        if hasattr(self.element, 'calculate_real_width'):
+            real_width_mm = self.element.calculate_real_width(self.dpi)
+            width_px = self._mm_to_px(real_width_mm)
+            logger.debug(f"[BARCODE-ITEM] Update: REAL width {real_width_mm:.1f}mm -> {width_px}px")
+        else:
+            width_px = self._mm_to_px(width)
+        
         height_px = self._mm_to_px(height)
         self.setRect(0, 0, width_px, height_px)
 
@@ -224,21 +240,52 @@ class EAN13BarcodeElement(BarcodeElement):
     def __init__(self, config: ElementConfig, data: str, 
                  width: int = 20, height: int = 10):
         super().__init__(config, 'EAN13', data, width, height)
+        self.module_width = 2  # dots (^BY parameter)
+    
+    def calculate_real_width(self, dpi=203):
+        """Розрахувати РЕАЛЬНУ ширину EAN-13 на основі module width
+        
+        EAN-13 structure:
+        - 3 quiet zone (left)
+        - 3 start guard (101)
+        - 42 left half (6 digits * 7 modules)
+        - 5 middle guard (01010)
+        - 42 right half (6 digits * 7 modules)
+        - 3 end guard (101)
+        - 7 quiet zone (right)
+        Total: 105 modules
+        """
+        total_modules = 105
+        width_dots = total_modules * self.module_width
+        width_mm = width_dots * 25.4 / dpi
+        logger.debug(f"[BARCODE-EAN13] Real width: {width_mm:.1f}mm ({total_modules} modules * {self.module_width} dots)")
+        return width_mm
     
     def to_zpl(self, dpi):
         x_dots = int(self.config.x * dpi / 25.4)
         y_dots = int(self.config.y * dpi / 25.4)
         height_dots = int(self.height * dpi / 25.4)
         
+        logger.debug(f"[BARCODE-ZPL-EAN13] Position: ({self.config.x:.1f}, {self.config.y:.1f})mm -> ({x_dots}, {y_dots})dots")
+        logger.debug(f"[BARCODE-ZPL-EAN13] Height: {self.height:.1f}mm -> {height_dots}dots")
+        
         barcode_data = self._get_barcode_data()
+        logger.debug(f"[BARCODE-ZPL-EAN13] Data: '{barcode_data}'")
+        
+        # Розрахувати РЕАЛЬНУ ширину для логу
+        real_width_mm = self.calculate_real_width(dpi)
+        logger.debug(f"[BARCODE-ZPL-EAN13] Real width: {real_width_mm:.1f}mm (will be used on print)")
         
         zpl_lines = []
         zpl_lines.append(f"^FO{x_dots},{y_dots}")
-        zpl_lines.append(f"^BY2")
+        zpl_lines.append(f"^BY{self.module_width}")
         zpl_lines.append(f"^BEN,{height_dots},Y,N")
         zpl_lines.append(f"^FD{barcode_data}^FS")
         
-        return "\n".join(zpl_lines)
+        zpl = "\n".join(zpl_lines)
+        logger.debug(f"[BARCODE-ZPL-EAN13] Generated: {zpl.replace(chr(10), ' | ')}")
+        
+        return zpl
     
     @classmethod
     def from_dict(cls, data):
@@ -260,21 +307,50 @@ class Code128BarcodeElement(BarcodeElement):
     def __init__(self, config: ElementConfig, data: str, 
                  width: int = 30, height: int = 10):
         super().__init__(config, 'CODE128', data, width, height)
+        self.module_width = 2  # dots (^BY parameter)
+    
+    def calculate_real_width(self, dpi=203):
+        """Розрахувати РЕАЛЬНУ ширину CODE128 на основі module width
+        
+        CODE128 structure:
+        - 10 quiet zone (left)
+        - 11 start character
+        - data_length * 11 (average per character)
+        - 13 stop character (includes 2-bar stop pattern)
+        - 10 quiet zone (right)
+        """
+        data_length = len(self.data)
+        total_modules = 10 + 11 + (data_length * 11) + 13 + 10
+        width_dots = total_modules * self.module_width
+        width_mm = width_dots * 25.4 / dpi
+        logger.debug(f"[BARCODE-CODE128] Real width: {width_mm:.1f}mm ({total_modules} modules * {self.module_width} dots, data_len={data_length})")
+        return width_mm
     
     def to_zpl(self, dpi):
         x_dots = int(self.config.x * dpi / 25.4)
         y_dots = int(self.config.y * dpi / 25.4)
         height_dots = int(self.height * dpi / 25.4)
         
+        logger.debug(f"[BARCODE-ZPL-CODE128] Position: ({self.config.x:.1f}, {self.config.y:.1f})mm -> ({x_dots}, {y_dots})dots")
+        logger.debug(f"[BARCODE-ZPL-CODE128] Height: {self.height:.1f}mm -> {height_dots}dots")
+        
         barcode_data = self._get_barcode_data()
+        logger.debug(f"[BARCODE-ZPL-CODE128] Data: '{barcode_data}' (len={len(barcode_data)})")
+        
+        # Розрахувати РЕАЛЬНУ ширину для логу
+        real_width_mm = self.calculate_real_width(dpi)
+        logger.debug(f"[BARCODE-ZPL-CODE128] Real width: {real_width_mm:.1f}mm (will be used on print)")
         
         zpl_lines = []
         zpl_lines.append(f"^FO{x_dots},{y_dots}")
-        zpl_lines.append(f"^BY2")
+        zpl_lines.append(f"^BY{self.module_width}")
         zpl_lines.append(f"^BCN,{height_dots},Y,N,N")
         zpl_lines.append(f"^FD{barcode_data}^FS")
         
-        return "\n".join(zpl_lines)
+        zpl = "\n".join(zpl_lines)
+        logger.debug(f"[BARCODE-ZPL-CODE128] Generated: {zpl.replace(chr(10), ' | ')}")
+        
+        return zpl
     
     @classmethod
     def from_dict(cls, data):

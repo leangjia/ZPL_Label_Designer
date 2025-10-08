@@ -89,7 +89,7 @@ class TemplateManager:
         Returns:
             Dict з label_config та elements
         """
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, 'r', encoding='utf-8-sig') as f:
             template_data = json.load(f)
         
         # Конвертувати елементи з dict → objects
