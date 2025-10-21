@@ -1,3 +1,7 @@
+中国大陆地区加速：
+
+pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple
+
 # ZPL Label Designer
 
 Профессиональное приложение для создания и редактирования этикеток в формате ZPL (Zebra Programming Language) с графическим интерфейсом на основе PySide6.
