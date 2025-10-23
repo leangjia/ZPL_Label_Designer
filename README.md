@@ -14,6 +14,15 @@ pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple
 pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple
 ```
 
+### 有图有真相
+![00简体中文汉化界面截图.png](00%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87%E6%B1%89%E5%8C%96%E7%95%8C%E9%9D%A2%E6%88%AA%E5%9B%BE.png)
+![01简体中文汉化界面截图.png](01%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87%E6%B1%89%E5%8C%96%E7%95%8C%E9%9D%A2%E6%88%AA%E5%9B%BE.png)
+![02简体中文汉化界面截图.png](02%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87%E6%B1%89%E5%8C%96%E7%95%8C%E9%9D%A2%E6%88%AA%E5%9B%BE.png)
+![03简体中文汉化界面截图.png](03%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87%E6%B1%89%E5%8C%96%E7%95%8C%E9%9D%A2%E6%88%AA%E5%9B%BE.png)
+![04简体中文汉化界面截图-预览.png](04%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87%E6%B1%89%E5%8C%96%E7%95%8C%E9%9D%A2%E6%88%AA%E5%9B%BE-%E9%A2%84%E8%A7%88.png)
+![05简体中文汉化界面截图-导出ZPL格式.png](05%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87%E6%B1%89%E5%8C%96%E7%95%8C%E9%9D%A2%E6%88%AA%E5%9B%BE-%E5%AF%BC%E5%87%BAZPL%E6%A0%BC%E5%BC%8F.png)
+![06简体中文汉化界面截图-插入QRcode二维码.png](06%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87%E6%B1%89%E5%8C%96%E7%95%8C%E9%9D%A2%E6%88%AA%E5%9B%BE-%E6%8F%92%E5%85%A5QRcode%E4%BA%8C%E7%BB%B4%E7%A0%81.png)
+
 基于 PySide6 图形界面的专业 ZPL (Zebra Programming Language) 标签创建和编辑应用程序。
 
 ## 🚀 功能特性
