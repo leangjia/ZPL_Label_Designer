@@ -1,4 +1,12 @@
+<<<<<<< HEAD
 # ZPL 标签设计器
+=======
+中国大陆地区加速：
+
+pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple
+
+# ZPL Label Designer
+>>>>>>> 8ade440d66ae4fe06a4391a6c3698afc42aeaae8
 
 ### 开源之家友情提醒：中国大陆地区加速：
 
@@ -153,6 +161,12 @@ python tests/test_snap_smart.py
 
 ---
 
+<<<<<<< HEAD
 **作者：** 高级软件工程师  
 **项目：** 1C_Zebra ZPL 标签设计器  
 **版本：** 1.0.0
+=======
+**Автор:** Senior Software Engineer  
+**Проект:** 1C_Zebra ZPL Label Designer  
+**Версия:** 1.0.0
+>>>>>>> 8ade440d66ae4fe06a4391a6c3698afc42aeaae8
