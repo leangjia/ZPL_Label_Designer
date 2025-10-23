@@ -1,14 +1,14 @@
-### СПРИНТ 3: Штрихкоди (7 кроків)
+### 冲刺 3: 条形码 (7个步骤)
 
 ---
 
-## ШАГ 3.1: Базовий клас BarcodeElement
+## 步骤 3.1: 基础 BarcodeElement 类
 
-**СТВОРИТИ: core/elements/barcode_element.py**
+**创建: core/elements/barcode_element.py**
 
 ```python
 # -*- coding: utf-8 -*-
-"""Базовий клас для штрихкодів"""
+"""条形码基础类"""
 
 from PySide6.QtWidgets import QGraphicsRectItem
 from PySide6.QtCore import Qt, Signal
@@ -17,7 +17,7 @@ from .base import BaseElement, ElementConfig
 
 
 class BarcodeElement(BaseElement):
-    """Базовий клас для штрихкодів"""
+    """条形码基础类"""
     
     BARCODE_TYPES = {
         'EAN13': 'EAN-13',
@@ -29,19 +29,19 @@ class BarcodeElement(BaseElement):
                  width: int = 50, height: int = 30):
         """
         Args:
-            config: Конфігурація позиції
-            barcode_type: Тип штрихкоду ('EAN13', 'CODE128', 'QRCODE')
-            data: Дані для кодування
-            width: Ширина у мм
-            height: Висота у мм
+            config: 位置配置
+            barcode_type: 条形码类型 ('EAN13', 'CODE128', 'QRCODE')
+            data: 编码数据
+            width: 宽度（毫米）
+            height: 高度（毫米）
         """
         super().__init__(config)
         self.barcode_type = barcode_type
         self.data = data
         self.width = width
         self.height = height
-        self.data_field = None  # Placeholder {{FIELD}}
-        self.show_text = True   # Показувати текст під штрихкодом
+        self.data_field = None  # 占位符 {{FIELD}}
+        self.show_text = True   # 在条形码下方显示文本
     
     def to_dict(self):
         return {
@@ -71,21 +71,21 @@ class BarcodeElement(BaseElement):
         return element
     
     def to_zpl(self, dpi):
-        """Генерація ZPL коду - реалізується у підкласах"""
+        """生成 ZPL 代码 - 在子类中实现"""
         raise NotImplementedError
     
     def _get_barcode_data(self):
-        """Отримати дані для штрихкоду (placeholder або реальні)"""
+        """获取条形码数据（占位符或实际数据）"""
         return self.data_field if self.data_field else self.data
 
 
 class GraphicsBarcodeItem(QGraphicsRectItem):
-    """Графічний елемент штрихкоду з drag-and-drop"""
+    """带有拖放功能的条形码图形元素"""
     
-    position_changed = Signal(float, float)  # x, y в мм
+    position_changed = Signal(float, float)  # x, y 以毫米为单位
     
     def __init__(self, element: BarcodeElement, dpi=203):
-        # Конвертація мм → пікселі
+        # 毫米 → 像素转换
         width_px = int(element.width * dpi / 25.4)
         height_px = int(element.height * dpi / 25.4)
         
@@ -94,18 +94,18 @@ class GraphicsBarcodeItem(QGraphicsRectItem):
         self.element = element
         self.dpi = dpi
         
-        # Настройки
+        # 设置
         self.setFlag(QGraphicsRectItem.ItemIsMovable)
         self.setFlag(QGraphicsRectItem.ItemIsSelectable)
         self.setFlag(QGraphicsRectItem.ItemSendsGeometryChanges)
         
-        # Стиль прямокутника (placeholder для штрихкоду)
+        # 矩形样式（条形码占位符）
         pen = QPen(QColor(0, 0, 255), 2, Qt.DashLine)
         brush = QBrush(QColor(200, 220, 255, 100))
         self.setPen(pen)
         self.setBrush(brush)
         
-        # Установити позицію
+        # 设置位置
         x_px = self._mm_to_px(element.config.x)
         y_px = self._mm_to_px(element.config.y)
         self.setPos(x_px, y_px)
@@ -117,13 +117,13 @@ class GraphicsBarcodeItem(QGraphicsRectItem):
         return px * 25.4 / self.dpi
     
     def itemChange(self, change, value):
-        """Відслідковування зміни позиції"""
+        """跟踪位置变化"""
         if change == QGraphicsRectItem.ItemPositionHasChanged:
-            # Оновити елемент
+            # 更新元素
             self.element.config.x = self._px_to_mm(self.pos().x())
             self.element.config.y = self._px_to_mm(self.pos().y())
             
-            # Сигнал про зміну
+            # 发送变化信号
             self.position_changed.emit(
                 self.element.config.x, 
                 self.element.config.y
@@ -132,7 +132,7 @@ class GraphicsBarcodeItem(QGraphicsRectItem):
         return super().itemChange(change, value)
     
     def update_size(self, width, height):
-        """Оновити розмір"""
+        """更新尺寸"""
         self.element.width = width
         self.element.height = height
         
@@ -141,53 +141,53 @@ class GraphicsBarcodeItem(QGraphicsRectItem):
         self.setRect(0, 0, width_px, height_px)
 ```
 
-**ТЕСТ:**
+**测试:**
 ```python
-# Створити test у tests/test_barcode_base.py
+# 在 tests/test_barcode_base.py 中创建测试
 from core.elements.barcode_element import BarcodeElement, GraphicsBarcodeItem
 from core.elements.base import ElementConfig
 
 config = ElementConfig(x=10, y=10)
 barcode = BarcodeElement(config, 'EAN13', '1234567890123', width=50, height=30)
 
-print(f"[OK] BarcodeElement created: {barcode.barcode_type}")
-print(f"[OK] Data: {barcode.data}")
-print(f"[OK] Size: {barcode.width}x{barcode.height}mm")
+print(f"[OK] BarcodeElement 已创建: {barcode.barcode_type}")
+print(f"[OK] 数据: {barcode.data}")
+print(f"[OK] 尺寸: {barcode.width}x{barcode.height}mm")
 ```
 
 ---
 
-## ШАГ 3.2: EAN-13 Штрихкод
+## 步骤 3.2: EAN-13 条形码
 
-**ОНОВИТИ: core/elements/barcode_element.py** (додати клас)
+**更新: core/elements/barcode_element.py** (添加类)
 
 ```python
 class EAN13BarcodeElement(BarcodeElement):
-    """EAN-13 штрихкод"""
+    """EAN-13 条形码"""
     
     def __init__(self, config: ElementConfig, data: str, 
                  width: int = 50, height: int = 30):
         super().__init__(config, 'EAN13', data, width, height)
     
     def to_zpl(self, dpi):
-        """Генерація ZPL для EAN-13"""
-        # Конвертація мм → dots
+        """生成 EAN-13 的 ZPL"""
+        # 毫米 → dots 转换
         x_dots = int(self.config.x * dpi / 25.4)
         y_dots = int(self.config.y * dpi / 25.4)
         height_dots = int(self.height * dpi / 25.4)
         
-        # Використати placeholder або дані
+        # 使用占位符或数据
         barcode_data = self._get_barcode_data()
         
-        # ZPL команда для EAN-13
-        # ^BY - ширина бару
-        # ^BC - тип Barcode (Code 128 за замовчуванням, але використаємо ^B3 для Code 39/128)
-        # Для EAN використовуємо ^BE
+        # EAN-13 的 ZPL 命令
+        # ^BY - 条宽度
+        # ^BC - 条形码类型（默认为 Code 128，但我们使用 ^B3 用于 Code 39/128）
+        # 对于 EAN 我们使用 ^BE
         
         zpl_lines = []
         zpl_lines.append(f"^FO{x_dots},{y_dots}")
-        zpl_lines.append(f"^BY2")  # Ширина бару
-        zpl_lines.append(f"^BEN,{height_dots},Y,N")  # EAN-13, висота, показ тексту
+        zpl_lines.append(f"^BY2")  # 条宽度
+        zpl_lines.append(f"^BEN,{height_dots},Y,N")  # EAN-13, 高度, 显示文本
         zpl_lines.append(f"^FD{barcode_data}^FS")
         
         return "\n".join(zpl_lines)
@@ -206,7 +206,7 @@ class EAN13BarcodeElement(BarcodeElement):
         return element
 ```
 
-**ТЕСТ:**
+**测试:**
 ```python
 ean13 = EAN13BarcodeElement(
     ElementConfig(x=10, y=10),
@@ -219,7 +219,7 @@ zpl = ean13.to_zpl(dpi=203)
 print("[INFO] EAN-13 ZPL:")
 print(zpl)
 
-# Очікуваний вивід:
+# 预期输出:
 # ^FO80,80
 # ^BY2
 # ^BEN,236,Y,N
@@ -228,31 +228,31 @@ print(zpl)
 
 ---
 
-## ШАГ 3.3: Code128 Штрихкод
+## 步骤 3.3: Code128 条形码
 
-**ОНОВИТИ: core/elements/barcode_element.py** (додати клас)
+**更新: core/elements/barcode_element.py** (添加类)
 
 ```python
 class Code128BarcodeElement(BarcodeElement):
-    """Code 128 штрихкод"""
+    """Code 128 条形码"""
     
     def __init__(self, config: ElementConfig, data: str, 
                  width: int = 60, height: int = 30):
         super().__init__(config, 'CODE128', data, width, height)
     
     def to_zpl(self, dpi):
-        """Генерація ZPL для Code 128"""
+        """生成 Code 128 的 ZPL"""
         x_dots = int(self.config.x * dpi / 25.4)
         y_dots = int(self.config.y * dpi / 25.4)
         height_dots = int(self.height * dpi / 25.4)
         
         barcode_data = self._get_barcode_data()
         
-        # ZPL для Code 128
+        # Code 128 的 ZPL
         zpl_lines = []
         zpl_lines.append(f"^FO{x_dots},{y_dots}")
         zpl_lines.append(f"^BY2")
-        zpl_lines.append(f"^BCN,{height_dots},Y,N,N")  # Code 128, висота, текст
+        zpl_lines.append(f"^BCN,{height_dots},Y,N,N")  # Code 128, 高度, 文本
         zpl_lines.append(f"^FD{barcode_data}^FS")
         
         return "\n".join(zpl_lines)
@@ -273,32 +273,32 @@ class Code128BarcodeElement(BarcodeElement):
 
 ---
 
-## ШАГ 3.4: QR Code
+## 步骤 3.4: QR 码
 
-**ОНОВИТИ: core/elements/barcode_element.py** (додати клас)
+**更新: core/elements/barcode_element.py** (添加类)
 
 ```python
 class QRCodeElement(BarcodeElement):
-    """QR Code"""
+    """QR 码"""
     
     def __init__(self, config: ElementConfig, data: str, 
                  size: int = 25):
-        # QR код квадратний, тому width = height = size
+        # QR 码是正方形的，所以 width = height = size
         super().__init__(config, 'QRCODE', data, width=size, height=size)
         self.size = size
-        self.magnification = 3  # Збільшення (1-10)
+        self.magnification = 3  # 放大倍数 (1-10)
     
     def to_zpl(self, dpi):
-        """Генерація ZPL для QR Code"""
+        """生成 QR 码的 ZPL"""
         x_dots = int(self.config.x * dpi / 25.4)
         y_dots = int(self.config.y * dpi / 25.4)
         
         barcode_data = self._get_barcode_data()
         
-        # ZPL для QR Code
+        # QR 码的 ZPL
         zpl_lines = []
         zpl_lines.append(f"^FO{x_dots},{y_dots}")
-        zpl_lines.append(f"^BQN,2,{self.magnification}")  # QR, модель 2, magnification
+        zpl_lines.append(f"^BQN,2,{self.magnification}")  # QR, 模型 2, 放大倍数
         zpl_lines.append(f"^FD{barcode_data}^FS")
         
         return "\n".join(zpl_lines)
@@ -324,74 +324,74 @@ class QRCodeElement(BarcodeElement):
 
 ---
 
-## ШАГ 3.5: Інтеграція у GUI - Toolbar
+## 步骤 3.5: GUI 集成 - 工具栏
 
-**ОНОВИТИ: gui/toolbar.py**
+**更新: gui/toolbar.py**
 
 ```python
-# Додати після Add Text:
+# 在 Add Text 后添加:
 
 self.addSeparator()
 
-# Add Barcode menu
-self.barcode_menu_action = QAction("Add Barcode", self)
-self.barcode_menu_action.setToolTip("Додати штрихкод")
+# 添加条形码菜单
+self.barcode_menu_action = QAction("添加条形码", self)
+self.barcode_menu_action.setToolTip("添加条形码")
 
-# Створити підменю
+# 创建子菜单
 from PySide6.QtWidgets import QMenu
 self.barcode_menu = QMenu(self)
 
 self.add_ean13_action = QAction("EAN-13", self)
-self.add_ean13_action.setToolTip("Додати EAN-13 штрихкод")
+self.add_ean13_action.setToolTip("添加 EAN-13 条形码")
 self.barcode_menu.addAction(self.add_ean13_action)
 
 self.add_code128_action = QAction("Code 128", self)
-self.add_code128_action.setToolTip("Додати Code 128 штрихкод")
+self.add_code128_action.setToolTip("添加 Code 128 条形码")
 self.barcode_menu.addAction(self.add_code128_action)
 
-self.add_qrcode_action = QAction("QR Code", self)
-self.add_qrcode_action.setToolTip("Додати QR код")
+self.add_qrcode_action = QAction("QR 码", self)
+self.add_qrcode_action.setToolTip("添加 QR 码")
 self.barcode_menu.addAction(self.add_qrcode_action)
 
 self.barcode_menu_action.setMenu(self.barcode_menu)
 
-# Додати до toolbar
+# 添加到工具栏
 self.addAction(self.barcode_menu_action)
 ```
 
-**ОНОВИТИ: gui/main_window.py** (підключити сигнали)
+**更新: gui/main_window.py** (连接信号)
 
 ```python
-# У __init__ після підключення add_text_action:
+# 在连接 add_text_action 后:
 
 self.toolbar.add_ean13_action.triggered.connect(self._add_ean13)
 self.toolbar.add_code128_action.triggered.connect(self._add_code128)
 self.toolbar.add_qrcode_action.triggered.connect(self._add_qrcode)
 ```
 
-**ДОДАТИ методи у MainWindow:**
+**在 MainWindow 中添加方法:**
 
 ```python
 def _add_ean13(self):
-    """Додати EAN-13 штрихкод"""
+    """添加 EAN-13 条形码"""
     from core.elements.barcode_element import EAN13BarcodeElement, GraphicsBarcodeItem
     
-    # Створити елемент
+    # 创建元素
     config = ElementConfig(x=10, y=10)
     element = EAN13BarcodeElement(config, data='1234567890123', width=50, height=30)
     
-    # Створити графічний елемент
+    # 创建图形元素
     graphics_item = GraphicsBarcodeItem(element, dpi=self.canvas.dpi)
     self.canvas.scene.addItem(graphics_item)
     
-    # Зберегти
+    # 保存
     self.elements.append(element)
     self.graphics_items.append(graphics_item)
     
-    logger.info(f"EAN-13 barcode added at ({element.config.x}, {element.config.y})")
+    logger.info(f"EAN-13 条形码已添加在 ({element.config.x}, {element.config.y})")
 
 def _add_code128(self):
-    """Додати Code 128 штрихкод"""
+    """添加 Code 128 条形码"""
     from core.elements.barcode_element import Code128BarcodeElement, GraphicsBarcodeItem
     
     config = ElementConfig(x=10, y=10)
@@ -403,10 +403,10 @@ def _add_code128(self):
     self.elements.append(element)
     self.graphics_items.append(graphics_item)
     
-    logger.info(f"Code 128 barcode added at ({element.config.x}, {element.config.y})")
+    logger.info(f"Code 128 条形码已添加在 ({element.config.x}, {element.config.y})")
 
 def _add_qrcode(self):
-    """Додати QR Code"""
+    """添加 QR 码"""
     from core.elements.barcode_element import QRCodeElement, GraphicsBarcodeItem
     
     config = ElementConfig(x=10, y=10)
@@ -418,30 +418,30 @@ def _add_qrcode(self):
     self.elements.append(element)
     self.graphics_items.append(graphics_item)
     
-    logger.info(f"QR Code added at ({element.config.x}, {element.config.y})")
+    logger.info(f"QR 码已添加在 ({element.config.x}, {element.config.y})")
 ```
 
 ---
 
-## ШАГ 3.6: Property Panel для штрихкодів
+## 步骤 3.6: 条形码属性面板
 
-**ОНОВИТИ: gui/property_panel.py**
+**更新: gui/property_panel.py**
 
-Додати після Text Properties Group:
+在 Text Properties Group 后添加:
 
 ```python
-# === Barcode Properties Group ===
-self.barcode_group = QGroupBox("Barcode Properties")
+# === 条形码属性组 ===
+self.barcode_group = QGroupBox("条形码属性")
 barcode_form = QFormLayout()
 
 self.barcode_type_label = QLabel()
-barcode_form.addRow("Type:", self.barcode_type_label)
+barcode_form.addRow("类型:", self.barcode_type_label)
 
 self.barcode_data_input = QLineEdit()
 self.barcode_data_input.textChanged.connect(
     lambda v: self._on_property_change('barcode_data', v)
 )
-barcode_form.addRow("Data:", self.barcode_data_input)
+barcode_form.addRow("数据:", self.barcode_data_input)
 
 self.barcode_width_input = QSpinBox()
 self.barcode_width_input.setRange(20, 100)
@@ -449,7 +449,7 @@ self.barcode_width_input.setSuffix(" mm")
 self.barcode_width_input.valueChanged.connect(
     lambda v: self._on_property_change('barcode_width', v)
 )
-barcode_form.addRow("Width:", self.barcode_width_input)
+barcode_form.addRow("宽度:", self.barcode_width_input)
 
 self.barcode_height_input = QSpinBox()
 self.barcode_height_input.setRange(10, 100)
@@ -457,29 +457,29 @@ self.barcode_height_input.setSuffix(" mm")
 self.barcode_height_input.valueChanged.connect(
     lambda v: self._on_property_change('barcode_height', v)
 )
-barcode_form.addRow("Height:", self.barcode_height_input)
+barcode_form.addRow("高度:", self.barcode_height_input)
 
 self.barcode_placeholder_input = QLineEdit()
 self.barcode_placeholder_input.setPlaceholderText("{{FIELD_NAME}}")
 self.barcode_placeholder_input.textChanged.connect(
     lambda v: self._on_property_change('barcode_data_field', v if v else None)
 )
-barcode_form.addRow("Placeholder:", self.barcode_placeholder_input)
+barcode_form.addRow("占位符:", self.barcode_placeholder_input)
 
 self.barcode_group.setLayout(barcode_form)
-self.barcode_group.setVisible(False)  # Приховати за замовчуванням
+self.barcode_group.setVisible(False)  # 默认隐藏
 
-# Додати до layout
+# 添加到布局
 layout.addWidget(text_group)
-layout.addWidget(self.barcode_group)  # <-- Додати ТУТ
+layout.addWidget(self.barcode_group)  # <-- 在此添加
 layout.addStretch()
 ```
 
-**ОНОВИТИ метод set_element:**
+**更新 set_element 方法:**
 
 ```python
 def set_element(self, element, graphics_item):
-    """Відобразити властивості елемента"""
+    """显示元素属性"""
     self.current_element = element
     self.current_graphics_item = graphics_item
     
@@ -487,16 +487,16 @@ def set_element(self, element, graphics_item):
         self.setEnabled(True)
         self.blockSignals(True)
         
-        # Загальні властивості
+        # 通用属性
         self.x_input.setValue(int(element.config.x))
         self.y_input.setValue(int(element.config.y))
         
-        # Визначити тип елемента
+        # 确定元素类型
         from core.elements.text_element import TextElement
         from core.elements.barcode_element import BarcodeElement
         
         if isinstance(element, TextElement):
-            # Показати тільки Text Properties
+            # 只显示文本属性
             self.text_group.setVisible(True)
             self.barcode_group.setVisible(False)
             
@@ -507,7 +507,7 @@ def set_element(self, element, graphics_item):
             )
         
         elif isinstance(element, BarcodeElement):
-            # Показати тільки Barcode Properties
+            # 只显示条形码属性
             self.text_group.setVisible(False)
             self.barcode_group.setVisible(True)
             
@@ -524,10 +524,10 @@ def set_element(self, element, graphics_item):
         self.setEnabled(False)
 ```
 
-**ОНОВИТИ метод _on_property_change:**
+**更新 _on_property_change 方法:**
 
 ```python
-# Додати обробку barcode properties:
+# 添加条形码属性处理:
 
 elif prop_name == 'barcode_data':
     self.current_element.data = value
@@ -548,15 +548,15 @@ elif prop_name == 'barcode_data_field':
 
 ---
 
-## ШАГ 3.7: Оновити Template Manager
+## 步骤 3.7: 更新模板管理器
 
-**ОНОВИТИ: core/template_manager.py**
+**更新: core/template_manager.py**
 
-У методі `_element_from_dict`:
+在 `_element_from_dict` 方法中:
 
 ```python
 def _element_from_dict(self, data: Dict[str, Any]) -> Optional[BaseElement]:
-    """Конвертувати dict → BaseElement"""
+    """转换 dict → BaseElement"""
     elem_type = data.get('type')
     
     if elem_type == 'text':
@@ -579,19 +579,19 @@ def _element_from_dict(self, data: Dict[str, Any]) -> Optional[BaseElement]:
         elif barcode_type == 'QRCODE':
             return QRCodeElement.from_dict(data)
     
-    print(f"[WARNING] Unknown element type: {elem_type}")
+    print(f"[警告] 未知元素类型: {elem_type}")
     return None
 ```
 
-**ОНОВИТИ: gui/main_window.py** у `_load_template`:
+**更新: gui/main_window.py** 中的 `_load_template`:
 
 ```python
-# Додати елементи на canvas
+# 添加元素到画布
 for element in template_data['elements']:
     from core.elements.text_element import TextElement
     from core.elements.barcode_element import BarcodeElement, GraphicsBarcodeItem
     
-    # Створити графічний елемент
+    # 创建图形元素
     if isinstance(element, TextElement):
         graphics_item = GraphicsTextItem(element, dpi=self.canvas.dpi)
     elif isinstance(element, BarcodeElement):
@@ -601,20 +601,20 @@ for element in template_data['elements']:
     
     self.canvas.scene.addItem(graphics_item)
     
-    # Зберегти
+    # 保存
     self.elements.append(element)
     self.graphics_items.append(graphics_item)
 ```
 
 ---
 
-## ШАГ 3.8: Тести
+## 步骤 3.8: 测试
 
-**СТВОРИТИ: tests/test_barcodes.py**
+**创建: tests/test_barcodes.py**
 
 ```python
 # -*- coding: utf-8 -*-
-"""Тест штрихкодів"""
+"""条形码测试"""
 
 import sys
 sys.path.insert(0, r'D:\AiKlientBank\1C_Zebra')
@@ -629,47 +629,47 @@ from zpl.generator import ZPLGenerator
 
 
 def test_barcodes():
-    """Тест створення та генерації ZPL для штрихкодів"""
+    """测试条形码创建和 ZPL 生成"""
     
     results = []
     
     # EAN-13
-    results.append("\n[TEST 1] EAN-13 Barcode")
+    results.append("\n[测试 1] EAN-13 条形码")
     config1 = ElementConfig(x=10, y=10)
     ean13 = EAN13BarcodeElement(config1, data='1234567890123', width=50, height=30)
     
-    results.append(f"[+] Created EAN-13: {ean13.data}")
-    results.append(f"[+] Size: {ean13.width}x{ean13.height}mm")
+    results.append(f"[+] 已创建 EAN-13: {ean13.data}")
+    results.append(f"[+] 尺寸: {ean13.width}x{ean13.height}mm")
     
     zpl1 = ean13.to_zpl(dpi=203)
     results.append("[INFO] EAN-13 ZPL:")
     results.append(zpl1)
     
     # Code 128
-    results.append("\n[TEST 2] Code 128 Barcode")
+    results.append("\n[测试 2] Code 128 条形码")
     config2 = ElementConfig(x=10, y=50)
     code128 = Code128BarcodeElement(config2, data='SAMPLE128', width=60, height=30)
     
-    results.append(f"[+] Created Code 128: {code128.data}")
+    results.append(f"[+] 已创建 Code 128: {code128.data}")
     
     zpl2 = code128.to_zpl(dpi=203)
     results.append("[INFO] Code 128 ZPL:")
     results.append(zpl2)
     
-    # QR Code
-    results.append("\n[TEST 3] QR Code")
+    # QR 码
+    results.append("\n[测试 3] QR 码")
     config3 = ElementConfig(x=70, y=10)
     qr = QRCodeElement(config3, data='https://example.com', size=25)
     
-    results.append(f"[+] Created QR Code: {qr.data}")
-    results.append(f"[+] Size: {qr.size}x{qr.size}mm")
+    results.append(f"[+] 已创建 QR 码: {qr.data}")
+    results.append(f"[+] 尺寸: {qr.size}x{qr.size}mm")
     
     zpl3 = qr.to_zpl(dpi=203)
-    results.append("[INFO] QR Code ZPL:")
+    results.append("[INFO] QR 码 ZPL:")
     results.append(zpl3)
     
-    # Повний ZPL з усіма штрихкодами
-    results.append("\n[TEST 4] Complete ZPL with all barcodes")
+    # 包含所有条形码的完整 ZPL
+    results.append("\n[测试 4] 包含所有条形码的完整 ZPL")
     
     label_config = {
         'width': 100,
@@ -681,12 +681,12 @@ def test_barcodes():
     elements = [ean13, code128, qr]
     
     full_zpl = generator.generate(elements, label_config)
-    results.append("[INFO] Complete ZPL:")
+    results.append("[INFO] 完整 ZPL:")
     results.append(full_zpl)
     
-    results.append("\n[SUCCESS] All barcode tests passed!")
+    results.append("\n[成功] 所有条形码测试通过!")
     
-    # Зберегти результат
+    # 保存结果
     output = '\n'.join(results)
     with open('tests/test_barcodes_result.txt', 'w', encoding='utf-8') as f:
         f.write(output)
@@ -701,10 +701,10 @@ if __name__ == '__main__':
         sys.exit(0 if success else 1)
     except Exception as e:
         with open('tests/test_barcodes_result.txt', 'w', encoding='utf-8') as f:
-            f.write(f"EXCEPTION: {e}\n")
+            f.write(f"异常: {e}\n")
             import traceback
             f.write(traceback.format_exc())
-        print(f"[ERROR] {e}")
+        print(f"[错误] {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
@@ -712,26 +712,26 @@ if __name__ == '__main__':
 
 ---
 
-## КОНТРОЛЬНА ТОЧКА СПРИНТ 3
+## 冲刺 3 检查点
 
-**ПЕРЕВІРИТИ ВСІ ФУНКЦІЇ:**
+**检查所有功能:**
 
-1. ✅ BarcodeElement базовий клас створено
-2. ✅ EAN13BarcodeElement працює
-3. ✅ Code128BarcodeElement працює
-4. ✅ QRCodeElement працює
-5. ✅ Toolbar має кнопку "Add Barcode" з підменю
-6. ✅ Можна додати EAN-13 на canvas
-7. ✅ Можна додати Code 128 на canvas
-8. ✅ Можна додати QR Code на canvas
-9. ✅ Property Panel показує barcode properties
-10. ✅ Можна редагувати Data, Width, Height
-11. ✅ Штрихкоди drag-and-drop працює
-12. ✅ ZPL генерація для штрихкодів
-13. ✅ Save/Load працює зі штрихкодами
-14. ✅ Preview показує штрихкоди
+1. ✅ BarcodeElement 基础类已创建
+2. ✅ EAN13BarcodeElement 正常工作
+3. ✅ Code128BarcodeElement 正常工作
+4. ✅ QRCodeElement 正常工作
+5. ✅ 工具栏有"添加条形码"按钮和子菜单
+6. ✅ 可以在画布上添加 EAN-13
+7. ✅ 可以在画布上添加 Code 128
+8. ✅ 可以在画布上添加 QR 码
+9. ✅ 属性面板显示条形码属性
+10. ✅ 可以编辑数据、宽度、高度
+11. ✅ 条形码拖放功能正常工作
+12. ✅ 条形码的 ZPL 生成
+13. ✅ 保存/加载功能与条形码配合使用
+14. ✅ 预览显示条形码
 
-**РУЧНИЙ ТЕСТ GUI:**
+**手动 GUI 测试:**
 
 ```bash
 cd D:\AiKlientBank\1C_Zebra
@@ -739,54 +739,54 @@ cd D:\AiKlientBank\1C_Zebra
 python main.py
 ```
 
-**Тести:**
-1. Клік на "Add Barcode" → побачиш підменю
-2. Вибери "EAN-13" → з'явиться синій прямокутник
-3. Перемісти його drag-and-drop
-4. Клік на штрихкод → Property Panel показує Barcode Properties
-5. Зміни Data на інше значення
-6. Додай Code 128 та QR Code
-7. Save → збережи як "test_barcodes.json"
-8. Load → завантаж назад
-9. Export ZPL → побачиш ZPL з ^BE, ^BC, ^BQ командами
-10. Preview → побачиш штрихкоди на етикетці
+**测试:**
+1. 点击"添加条形码" → 看到子菜单
+2. 选择"EAN-13" → 出现蓝色矩形
+3. 拖放移动它
+4. 点击条形码 → 属性面板显示条形码属性
+5. 将数据更改为其他值
+6. 添加 Code 128 和 QR 码
+7. 保存 → 保存为 "test_barcodes.json"
+8. 加载 → 重新加载回来
+9. 导出 ZPL → 看到带有 ^BE, ^BC, ^BQ 命令的 ZPL
+10. 预览 → 在标签上看到条形码
 
-**Якщо ВСІ тести прошли - Спринт 3 завершено.**
+**如果所有测试通过 - 冲刺 3 完成。**
 
-**Якщо щось не працює - ОСТАНОВ, виправ, повтори тест.**
-
----
-
-## ФОРМАТ КОММУНИКАЦІЇ
-
-**При виконанні кожного кроку пиши:**
-
-```
-=== ШАГ X.Y ВИКОНУЄТЬСЯ ===
-
-[Команди або дії]
-
-=== ТЕСТ ===
-
-[Результати тестування]
-
-=== СТАТУС ===
-[OK] Все працює
-або
-[FAILED] Опис проблеми
-```
-
-**Після успішного тесту чекай команду:**
-- "Продолжай" - перейди до наступного кроку
-- "Исправь X" - виправ проблему
-- "Покажи код X" - покажи конкретний файл
+**如果有任何问题 - 停止，修复，重新测试。**
 
 ---
 
-## ПОЧАТОК РОБОТИ
+## 沟通格式
 
-**Виконай ШАГ 3.1**
+**执行每个步骤时请写:**
 
-Створи базовий клас BarcodeElement та GraphicsBarcodeItem згідно інструкції вище.
+```
+=== 步骤 X.Y 执行中 ===
 
-Після завершення напиши статус і чекай команду.
+[命令或操作]
+
+=== 测试 ===
+
+[测试结果]
+
+=== 状态 ===
+[OK] 一切正常
+或
+[失败] 问题描述
+```
+
+**成功测试后等待命令:**
+- "继续" - 转到下一步
+- "修复 X" - 修复问题
+- "显示代码 X" - 显示特定文件
+
+---
+
+## 开始工作
+
+**执行步骤 3.1**
+
+根据以上说明创建基础 BarcodeElement 和 GraphicsBarcodeItem 类。
+
+完成后写状态并等待命令。

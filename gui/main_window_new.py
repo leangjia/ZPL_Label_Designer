@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Главное окно приложения"""
+"""应用程序主窗口"""
 
 from PySide6.QtWidgets import (QMainWindow, QDockWidget, QWidget, QGridLayout)
 from PySide6.QtCore import Qt
@@ -26,7 +26,7 @@ from utils.unit_converter import MeasurementUnit
 from config import DEFAULT_UNIT
 
 
-class MainWindow(QMainWindow, 
+class MainWindow(QMainWindow,
                  ElementCreationMixin,
                  SelectionMixin,
                  TemplateMixin,
@@ -34,114 +34,114 @@ class MainWindow(QMainWindow,
                  ShortcutsMixin,
                  LabelConfigMixin,
                  UIHelpersMixin):
-    """Главное окно редактора"""
-    
+    """编辑器主窗口"""
+
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ZPL Label Designer")
+        self.setWindowTitle("ZPL 标签设计器")
         self.resize(1200, 700)
-        logger.info("MainWindow initialized")
-        
-        # Список элементов и графических элементов
+        logger.info("主窗口已初始化")
+
+        # 元素和图形项列表
         self.elements = []
         self.graphics_items = []
         self.selected_item = None
-        
-        # Clipboard для copy/paste
+
+        # 剪贴板用于复制/粘贴
         self.clipboard_element = None
-        
-        # Drag state
+
+        # 拖拽状态
         self.drag_start_pos = None
-        
-        # ZPL Generator
+
+        # ZPL 生成器
         self.zpl_generator = ZPLGenerator(dpi=203)
         self.labelary_client = LabelaryClient(dpi=203)
         self.template_manager = TemplateManager()
-        logger.info("ZPL Generator, Labelary Client and Template Manager created")
-        
-        # Canvas
+        logger.info("ZPL 生成器、Labelary 客户端和模板管理器已创建")
+
+        # 画布
         self.canvas = CanvasView(width_mm=28, height_mm=28, dpi=203)
-        logger.info("Canvas created (28x28mm, DPI 203)")
-        
-        # Smart Guides
+        logger.info("画布已创建 (28x28mm, DPI 203)")
+
+        # 智能参考线
         self.smart_guides = SmartGuides(self.canvas.scene)
         self.guides_enabled = True
-        logger.info("Smart Guides initialized")
-        
-        # Undo/Redo Stack
+        logger.info("智能参考线已初始化")
+
+        # 撤销/重做堆栈
         self.undo_stack = QUndoStack(self)
-        logger.debug(f"[UNDO-STACK] Initialized")
-        
-        # Rulers
+        logger.debug(f"[撤销堆栈] 已初始化")
+
+        # 标尺
         self.h_ruler = HorizontalRuler(length_mm=28, dpi=203, scale=2.5)
         self.v_ruler = VerticalRuler(length_mm=28, dpi=203, scale=2.5)
-        logger.info("Rulers created")
-        
-        # Link rulers to canvas
+        logger.info("标尺已创建")
+
+        # 将标尺链接到画布
         self.canvas.h_ruler = self.h_ruler
         self.canvas.v_ruler = self.v_ruler
-        logger.info("Rulers linked to canvas")
-        
-        # Central widget layout
+        logger.info("标尺已链接到画布")
+
+        # 中央控件布局
         central_widget = QWidget()
         grid_layout = QGridLayout(central_widget)
         grid_layout.setSpacing(0)
         grid_layout.setContentsMargins(0, 0, 0, 0)
-        
+
         corner_spacer = QWidget()
         corner_spacer.setFixedSize(25, 25)
         grid_layout.addWidget(corner_spacer, 0, 0)
         grid_layout.addWidget(self.h_ruler, 0, 1)
         grid_layout.addWidget(self.v_ruler, 1, 0)
         grid_layout.addWidget(self.canvas, 1, 1)
-        
+
         self.setCentralWidget(central_widget)
-        logger.info("Central widget with rulers configured")
-        
-        # Toolbar
+        logger.info("带标尺的中央控件已配置")
+
+        # 工具栏
         self.toolbar = EditorToolbar(self)
         self.addToolBar(self.toolbar)
-        logger.info("Toolbar created")
-        
-        # Property panel
+        logger.info("工具栏已创建")
+
+        # 属性面板
         self.property_panel = PropertyPanel()
-        dock = QDockWidget("Properties", self)
+        dock = QDockWidget("属性", self)
         dock.setWidget(self.property_panel)
         dock.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
         self.addDockWidget(Qt.RightDockWidgetArea, dock)
-        logger.info("Property panel created")
-        
-        # Snap to grid
+        logger.info("属性面板已创建")
+
+        # 网格吸附
         self.snap_enabled = True
-        
-        # Current display unit
+
+        # 当前显示单位
         self.current_unit = DEFAULT_UNIT
-        
-        # Connect signals
+
+        # 连接信号
         self._connect_signals()
-        
-        # Setup UI controls from mixins
+
+        # 从混入类设置 UI 控件
         self._create_snap_toggle()
         self._create_label_size_controls()
         self._create_units_controls()
-        
-        # Setup shortcuts
+
+        # 设置快捷键
         self._setup_shortcuts()
-        
-        logger.info("MainWindow fully initialized")
-    
+
+        logger.info("主窗口完全初始化")
+
     def _connect_signals(self):
-        """Connect all signals"""
-        # Canvas signals
+        """连接所有信号"""
+        # 画布信号
         self.canvas.scene.selectionChanged.connect(self._on_selection_changed)
         self.canvas.cursor_position_changed.connect(self._update_ruler_cursor)
         self.canvas.context_menu_requested.connect(self._show_context_menu)
-        
-        # Event filters
+
+        # 事件过滤器
         self.canvas.viewport().installEventFilter(self)
         self.canvas.scene.installEventFilter(self)
-        
-        # Toolbar signals
+
+        # 工具栏信号
         self.toolbar.add_text_action.triggered.connect(self._add_text)
         self.toolbar.add_ean13_action.triggered.connect(self._add_ean13)
         self.toolbar.add_code128_action.triggered.connect(self._add_code128)
@@ -154,5 +154,5 @@ class MainWindow(QMainWindow,
         self.toolbar.load_action.triggered.connect(self._load_template)
         self.toolbar.export_action.triggered.connect(self._export_zpl)
         self.toolbar.preview_action.triggered.connect(self._show_preview)
-        
-        logger.info("All signals connected")
+
+        logger.info("所有信号已连接")

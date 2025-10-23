@@ -1,32 +1,34 @@
 # -*- coding: utf-8 -*-
-"""Базовый класс для всех элементов этикетки"""
+"""所有标签元素的基础类"""
 
 from dataclasses import dataclass
 from typing import Dict, Any
 
+
 @dataclass
 class ElementConfig:
-    """Конфигурация позиции элемента"""
-    x: float  # Позиция X в мм
-    y: float  # Позиция Y в мм
-    rotation: int = 0  # Поворот в градусах
+    """元素位置配置"""
+    x: float  # X 位置（毫米）
+    y: float  # Y 位置（毫米）
+    rotation: int = 0  # 旋转角度（度）
+
 
 class BaseElement:
-    """Базовый класс элемента этикетки"""
-    
+    """标签元素基础类"""
+
     def __init__(self, config: ElementConfig):
         self.config = config
         self.id = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
-        """Сериализация в JSON"""
+        """序列化到 JSON"""
         raise NotImplementedError
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
-        """Десериализация из JSON"""
+        """从 JSON 反序列化"""
         raise NotImplementedError
-    
+
     def to_zpl(self, dpi: int) -> str:
-        """Генерация ZPL кода"""
+        """生成 ZPL 代码"""
         raise NotImplementedError

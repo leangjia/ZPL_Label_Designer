@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""MainWindow Mixins для розділення функціоналу"""
+"""MainWindow Mixins 主窗口混入类 - 功能模块分离"""
 
 from .element_creation_mixin import ElementCreationMixin
 from .selection_mixin import SelectionMixin

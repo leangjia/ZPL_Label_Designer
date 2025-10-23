@@ -1,68 +1,68 @@
 # -*- coding: utf-8 -*-
-"""Панель инструментов"""
+"""工具栏"""
 
 from PySide6.QtWidgets import QToolBar
 
 
 class EditorToolbar(QToolBar):
-    """Панель инструментов редактора"""
+    """编辑器工具栏"""
 
     def __init__(self, actions, menus, parent=None):
-        super().__init__("Tools", parent)
+        super().__init__("工具", parent)
 
         self.actions = actions
         self.menus = menus
 
-        # Add Text
+        # 添加文本
         self.add_text_action = self.actions['add_text']
         self.addAction(self.add_text_action)
 
         self.addSeparator()
 
-        # Add Barcode menu
+        # 添加条码菜单
         self.barcode_menu_action = self.actions['barcode_menu']
         self.barcode_menu = self.menus['barcode']
         self.barcode_menu_action.setMenu(self.barcode_menu)
 
-        # Добавить к toolbar
+        # 添加到工具栏
         self.addAction(self.barcode_menu_action)
 
         self.addSeparator()
 
-        # Add Shape menu
+        # 添加形状菜单
         self.shape_menu_action = self.actions['shape_menu']
         self.shape_menu = self.menus['shape']
         self.shape_menu_action.setMenu(self.shape_menu)
 
-        # Добавить к toolbar
+        # 添加到工具栏
         self.addAction(self.shape_menu_action)
 
         self.addSeparator()
 
-        # Add Image
+        # 添加图片
         self.add_image_action = self.actions['add_image']
         self.addAction(self.add_image_action)
 
         self.addSeparator()
 
-        # Save
+        # 保存
         self.save_action = self.actions['save']
         self.addAction(self.save_action)
 
-        # Load
+        # 加载
         self.load_action = self.actions['load']
         self.addAction(self.load_action)
 
         self.addSeparator()
 
-        # Export ZPL
+        # 导出 ZPL
         self.export_action = self.actions['export']
         self.addAction(self.export_action)
 
-        # Preview
+        # 预览
         self.preview_action = self.actions['preview']
         self.addAction(self.preview_action)
 
-        # Open JSON
+        # 打开 JSON
         self.open_json_action = self.actions['open_json']
         self.addAction(self.open_json_action)

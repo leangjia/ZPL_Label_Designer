@@ -1,0 +1,101 @@
+{
+  "name": "1 等级 直级",
+  "version": "1.0",
+  "created_at": "2025-10-08T04:10:37.399913",
+  "updated_at": "2025-10-08T04:10:37.399938",
+  "label_config": {
+    "width_mm": 28.0,
+    "height_mm": 28.0,
+    "dpi": 203,
+    "display_unit": "mm"
+  },
+  "elements": [
+    {
+      "type": "text",
+      "x": 1.0000000000000002,
+      "y": 0.6496551724137932,
+      "text": "ACTIVITY 20",
+      "font_size": 18,
+      "font_family": "0",
+      "data_field": "{{型号}}",
+      "bold": true,
+      "italic": false,
+      "underline": false
+    },
+    {
+      "type": "text",
+      "x": 1.0,
+      "y": 4.0,
+      "text": "尺寸",
+      "font_size": 14,
+      "font_family": "0",
+      "data_field": null,
+      "bold": true,
+      "italic": false,
+      "underline": false
+    },
+    {
+      "type": "barcode",
+      "barcode_type": "EAN13",
+      "x": 3.0,
+      "y": 6.0,
+      "data": "4820023717633",
+      "width": 26.275862068965516,
+      "height": 10,
+      "data_field": "{{条码}}",
+      "show_text": true
+    },
+    {
+      "type": "text",
+      "x": 12.0,
+      "y": 4.0,
+      "text": "新文本",
+      "font_size": 14,
+      "font_family": "0",
+      "data_field": "{{尺寸}}",
+      "bold": true,
+      "italic": false,
+      "underline": false
+    },
+    {
+      "type": "text",
+      "x": 1.0,
+      "y": 19.0,
+      "text": "新文本",
+      "font_size": 12,
+      "font_family": "0",
+      "data_field": "{{颜色}}",
+      "bold": true,
+      "italic": false,
+      "underline": false
+    },
+    {
+      "type": "text",
+      "x": 1.0,
+      "y": 22.0,
+      "text": "生产日期和批号：",
+      "font_size": 11,
+      "font_family": "0",
+      "data_field": null,
+      "bold": false,
+      "italic": false,
+      "underline": false
+    },
+    {
+      "type": "text",
+      "x": 2.0,
+      "y": 24.0,
+      "text": "新文本",
+      "font_size": 12,
+      "font_family": "0",
+      "data_field": "{{当前日期}}",
+      "bold": true,
+      "italic": false,
+      "underline": false
+    }
+  ],
+  "metadata": {
+    "elements_count": 7,
+    "application": "ZPL 标签设计器 1.0"
+  }
+}

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Shape Elements для ZPL Label Designer"""
+"""ZPL 标签设计器的形状元素"""
 
 from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsItem
 from PySide6.QtCore import Qt, QPointF, QRectF, QLineF
@@ -10,9 +10,9 @@ from utils.logger import logger
 
 
 class ShapeConfig(ElementConfig):
-    """Базова конфігурація для Shape елементів"""
-    
-    def __init__(self, x=0, y=0, width=50, height=50, 
+    """形状元素的基础配置"""
+
+    def __init__(self, x=0, y=0, width=50, height=50,
                  fill=False, border_thickness=2, color='black'):
         super().__init__(x, y)
         self.width = width
@@ -23,16 +23,16 @@ class ShapeConfig(ElementConfig):
 
 
 class RectangleElement(BaseElement):
-    """Rectangle елемент"""
-    
+    """矩形元素"""
+
     def __init__(self, config=None):
         if config is None:
             config = ShapeConfig()
         super().__init__(config)
-        logger.debug(f"[SHAPE-RECT] Created: size=({config.width}x{config.height})mm, fill={config.fill}")
-    
+        logger.debug(f"[形状-矩形] 已创建: 尺寸=({config.width}x{config.height})mm, 填充={config.fill}")
+
     def to_dict(self):
-        """Серіалізація у dict"""
+        """序列化到 dict"""
         return {
             'type': 'rectangle',
             'x': self.config.x,
@@ -43,10 +43,10 @@ class RectangleElement(BaseElement):
             'border_thickness': self.config.border_thickness,
             'color': self.config.color
         }
-    
+
     @classmethod
     def from_dict(cls, data):
-        """Десеріалізація з dict"""
+        """从 dict 反序列化"""
         config = ShapeConfig(
             x=data['x'],
             y=data['y'],
@@ -57,108 +57,108 @@ class RectangleElement(BaseElement):
             color=data.get('color', 'black')
         )
         return cls(config)
-    
+
     def to_zpl(self, dpi=203):
-        """Генерація ZPL команд для rectangle
-        
-        Format: ^GB{width},{height},{thickness},{color},{rounding}
+        """生成矩形的 ZPL 命令
+
+        格式: ^GB{宽度},{高度},{厚度},{颜色},{圆角}
         """
-        # Конвертувати координати mm -> dots
+        # 转换坐标 mm -> dots
         x_dots = int(self.config.x * dpi / 25.4)
         y_dots = int(self.config.y * dpi / 25.4)
         width_dots = int(self.config.width * dpi / 25.4)
         height_dots = int(self.config.height * dpi / 25.4)
-        
-        logger.debug(f"[SHAPE-ZPL-RECT] Position: ({x_dots}, {y_dots}) dots")
-        logger.debug(f"[SHAPE-ZPL-RECT] Size: ({width_dots}x{height_dots}) dots")
-        
-        # Визначити thickness для fill
+
+        logger.debug(f"[形状-ZPL-矩形] 位置: ({x_dots}, {y_dots}) 点")
+        logger.debug(f"[形状-ZPL-矩形] 尺寸: ({width_dots}x{height_dots}) 点")
+
+        # 确定填充的厚度
         if self.config.fill:
-            # Fill: thickness = height
+            # 填充: 厚度 = 高度
             thickness = height_dots
         else:
-            # Border: thickness у dots
+            # 边框: 厚度（点）
             thickness = int(self.config.border_thickness * dpi / 25.4)
-        
-        logger.debug(f"[SHAPE-ZPL-RECT] Fill={self.config.fill}, thickness={thickness}")
-        
-        # Color (B=black, W=white)
+
+        logger.debug(f"[形状-ZPL-矩形] 填充={self.config.fill}, 厚度={thickness}")
+
+        # 颜色 (B=黑色, W=白色)
         color = 'B' if self.config.color == 'black' else 'W'
-        
-        # Rounding (0 = no rounding)
+
+        # 圆角 (0 = 无圆角)
         rounding = 0
-        
+
         zpl_commands = [
             f"^FO{x_dots},{y_dots}",
             f"^GB{width_dots},{height_dots},{thickness},{color},{rounding}",
             "^FS"
         ]
-        
-        logger.debug(f"[SHAPE-ZPL-RECT] Generated ZPL")
+
+        logger.debug(f"[形状-ZPL-矩形] 已生成 ZPL")
         return "\n".join(zpl_commands)
 
 
 class CircleElement(BaseElement):
-    """Circle елемент з підтримкою diameter та auto-switch до Ellipse"""
-    
+    """圆形元素，支持直径和自动切换到椭圆"""
+
     def __init__(self, config=None):
         if config is None:
             config = ShapeConfig(width=50, height=50)
         super().__init__(config)
-        logger.debug(f"[SHAPE-CIRCLE] Created: size=({config.width}x{config.height})mm, fill={config.fill}")
-    
+        logger.debug(f"[形状-圆形] 已创建: 尺寸=({config.width}x{config.height})mm, 填充={config.fill}")
+
     @property
     def is_circle(self):
-        """True якщо width == height (допуск 0.1мм)"""
+        """如果 width == height 则为 True（容差 0.1mm）"""
         is_circ = abs(self.config.width - self.config.height) < 0.1
-        logger.debug(f"[CIRCLE] is_circle check: w={self.config.width:.2f}, h={self.config.height:.2f}, result={is_circ}")
+        logger.debug(f"[圆形] is_circle 检查: 宽={self.config.width:.2f}, 高={self.config.height:.2f}, 结果={is_circ}")
         return is_circ
-    
+
     @property
     def diameter(self):
-        """Діаметр для кола (якщо це коло)"""
+        """圆的直径（如果是圆）"""
         if self.is_circle:
             return self.config.width
         return None
-    
+
     @diameter.setter
     def diameter(self, value):
-        """Встановити diameter → синхронізувати width/height"""
-        logger.debug(f"[CIRCLE] Set diameter: {value:.2f}mm")
+        """设置直径 → 同步 width/height"""
+        logger.debug(f"[圆形] 设置直径: {value:.2f}mm")
         self.config.width = value
         self.config.height = value
-        logger.debug(f"[CIRCLE] After diameter set: w={self.config.width:.2f}, h={self.config.height:.2f}, is_circle={self.is_circle}")
-    
+        logger.debug(f"[圆形] 设置直径后: 宽={self.config.width:.2f}, 高={self.config.height:.2f}, is_circle={self.is_circle}")
+
     def set_width(self, width_mm):
-        """При зміні width перевіряємо is_circle"""
+        """更改宽度时检查 is_circle"""
         old_is_circle = self.is_circle
         self.config.width = width_mm
         new_is_circle = self.is_circle
-        
-        logger.debug(f"[CIRCLE] Set width: {width_mm:.2f}mm")
-        logger.debug(f"[CIRCLE] Shape change: {old_is_circle} -> {new_is_circle}")
-        
+
+        logger.debug(f"[圆形] 设置宽度: {width_mm:.2f}mm")
+        logger.debug(f"[圆形] 形状变化: {old_is_circle} -> {new_is_circle}")
+
         if old_is_circle and not new_is_circle:
-            logger.info(f"[CIRCLE] Shape changed: Circle -> Ellipse")
+            logger.info(f"[圆形] 形状已改变: 圆形 -> 椭圆")
         elif not old_is_circle and new_is_circle:
-            logger.info(f"[CIRCLE] Shape changed: Ellipse -> Circle")
-    
+            logger.info(f"[圆形] 形状已改变: 椭圆 -> 圆形")
+
     def set_height(self, height_mm):
-        """При зміні height перевіряємо is_circle"""
+        """更改高度时检查 is_circle"""
         old_is_circle = self.is_circle
         self.config.height = height_mm
         new_is_circle = self.is_circle
-        
-        logger.debug(f"[CIRCLE] Set height: {height_mm:.2f}mm")
-        logger.debug(f"[CIRCLE] Shape change: {old_is_circle} -> {new_is_circle}")
-        
+
+        logger.debug(f"[圆形] 设置高度: {height_mm:.2f}mm")
+        logger.debug(f"[圆形] 形状变化: {old_is_circle} -> {new_is_circle}")
+
         if old_is_circle and not new_is_circle:
-            logger.info(f"[CIRCLE] Shape changed: Circle -> Ellipse")
+            logger.info(f"[圆形] 形状已改变: 圆形 -> 椭圆")
         elif not old_is_circle and new_is_circle:
-            logger.info(f"[CIRCLE] Shape changed: Ellipse -> Circle")
-    
+            logger.info(f"[圆形] 形状已改变: 椭圆 -> 圆形")
+
     def to_dict(self):
-        """Серіалізація у dict"""
+        """序列化到 dict"""
         return {
             'type': 'circle',
             'x': self.config.x,
@@ -169,10 +169,10 @@ class CircleElement(BaseElement):
             'border_thickness': self.config.border_thickness,
             'color': self.config.color
         }
-    
+
     @classmethod
     def from_dict(cls, data):
-        """Десеріалізація з dict"""
+        """从 dict 反序列化"""
         config = ShapeConfig(
             x=data['x'],
             y=data['y'],
@@ -183,84 +183,84 @@ class CircleElement(BaseElement):
             color=data.get('color', 'black')
         )
         return cls(config)
-    
+
     def to_zpl(self, dpi=203):
-        """Генерація ZPL команд для Circle або Ellipse
-        
-        Format: ^GC{diameter},{thickness},{color} - для Circle
-        Format: ^GE{width},{height},{thickness},{color} - для Ellipse
+        """生成圆形或椭圆的 ZPL 命令
+
+        格式: ^GC{直径},{厚度},{颜色} - 用于圆形
+        格式: ^GE{宽度},{高度},{厚度},{颜色} - 用于椭圆
         """
-        # Конвертувати координати mm -> dots
+        # 转换坐标 mm -> dots
         x_dots = int(self.config.x * dpi / 25.4)
         y_dots = int(self.config.y * dpi / 25.4)
         width_dots = int(self.config.width * dpi / 25.4)
         height_dots = int(self.config.height * dpi / 25.4)
-        
-        logger.debug(f"[SHAPE-ZPL-CIRCLE] Position: ({x_dots}, {y_dots}) dots")
-        logger.debug(f"[SHAPE-ZPL-CIRCLE] Size: {width_dots}x{height_dots} dots, is_circle={self.is_circle}")
-        
-        # Визначити thickness
+
+        logger.debug(f"[形状-ZPL-圆形] 位置: ({x_dots}, {y_dots}) 点")
+        logger.debug(f"[形状-ZPL-圆形] 尺寸: {width_dots}x{height_dots} 点, is_circle={self.is_circle}")
+
+        # 确定厚度
         thickness_mm = self.config.border_thickness
         thickness_dots = int(thickness_mm * dpi / 25.4)
-        
-        # Color (B=black, W=white)
+
+        # 颜色 (B=黑色, W=白色)
         color = 'B' if self.config.color == 'black' else 'W'
-        
+
         if self.is_circle:
-            # CIRCLE: ^GC{diameter},{thickness},{color}
+            # 圆形: ^GC{直径},{厚度},{颜色}
             diameter_dots = width_dots  # width == height
-            
-            # LOG для тесту: mm -> dots
-            logger.debug(f"[ZPL-CIRCLE] Circle: diameter={self.diameter:.2f}mm -> {diameter_dots}dots")
-            
+
+            # 测试日志: mm -> dots
+            logger.debug(f"[ZPL-圆形] 圆形: 直径={self.diameter:.2f}mm -> {diameter_dots}点")
+
             if self.config.fill:
-                # Fill: thickness = diameter
+                # 填充: 厚度 = 直径
                 thickness = diameter_dots
             else:
-                # Border: thickness у dots
+                # 边框: 厚度（点）
                 thickness = thickness_dots
-            
-            logger.debug(f"[SHAPE-ZPL-CIRCLE] ^GC format: diameter={diameter_dots}, thickness={thickness}, fill={self.config.fill}")
-            
+
+            logger.debug(f"[形状-ZPL-圆形] ^GC 格式: 直径={diameter_dots}, 厚度={thickness}, 填充={self.config.fill}")
+
             zpl_commands = [
                 f"^FO{x_dots},{y_dots}",
                 f"^GC{diameter_dots},{thickness},{color}",
                 "^FS"
             ]
-            
-            # LOG для тесту: згенерований ZPL
-            logger.debug(f"[ZPL-CIRCLE] Generated Circle: {''.join(zpl_commands)}")
+
+            # 测试日志: 生成的 ZPL
+            logger.debug(f"[ZPL-圆形] 生成的圆形: {''.join(zpl_commands)}")
         else:
-            # ELLIPSE: ^GE{width},{height},{thickness},{color}
-            
-            # LOG для тесту: mm -> dots
-            logger.debug(f"[ZPL-CIRCLE] Ellipse: w={self.config.width:.2f}mm, h={self.config.height:.2f}mm -> {width_dots}x{height_dots}dots")
-            
+            # 椭圆: ^GE{宽度},{高度},{厚度},{颜色}
+
+            # 测试日志: mm -> dots
+            logger.debug(f"[ZPL-圆形] 椭圆: 宽={self.config.width:.2f}mm, 高={self.config.height:.2f}mm -> {width_dots}x{height_dots}点")
+
             if self.config.fill:
-                # Fill: thickness = height
+                # 填充: 厚度 = 高度
                 thickness = height_dots
             else:
-                # Border: thickness у dots
+                # 边框: 厚度（点）
                 thickness = thickness_dots
-            
-            logger.debug(f"[SHAPE-ZPL-ELLIPSE] ^GE format: width={width_dots}, height={height_dots}, thickness={thickness}, fill={self.config.fill}")
-            
+
+            logger.debug(f"[形状-ZPL-椭圆] ^GE 格式: 宽度={width_dots}, 高度={height_dots}, 厚度={thickness}, 填充={self.config.fill}")
+
             zpl_commands = [
                 f"^FO{x_dots},{y_dots}",
                 f"^GE{width_dots},{height_dots},{thickness},{color}",
                 "^FS"
             ]
-            
-            # LOG для тесту: згенерований ZPL
-            logger.debug(f"[ZPL-CIRCLE] Generated Ellipse: {''.join(zpl_commands)}")
-        
-        logger.debug(f"[SHAPE-ZPL] Generated ZPL for {'Circle' if self.is_circle else 'Ellipse'}")
+
+            # 测试日志: 生成的 ZPL
+            logger.debug(f"[ZPL-圆形] 生成的椭圆: {''.join(zpl_commands)}")
+
+        logger.debug(f"[形状-ZPL] 已生成 {'圆形' if self.is_circle else '椭圆'} 的 ZPL")
         return "\n".join(zpl_commands)
 
 
 class LineConfig(ElementConfig):
-    """Конфігурація для Line елемента"""
-    
+    """线条元素的配置"""
+
     def __init__(self, x=0, y=0, x2=50, y2=50, thickness=2, color='black'):
         super().__init__(x, y)
         self.x2 = x2
@@ -270,16 +270,16 @@ class LineConfig(ElementConfig):
 
 
 class LineElement(BaseElement):
-    """Line елемент"""
-    
+    """线条元素"""
+
     def __init__(self, config=None):
         if config is None:
             config = LineConfig()
         super().__init__(config)
-        logger.debug(f"[SHAPE-LINE] Created: from ({config.x},{config.y}) to ({config.x2},{config.y2})mm")
-    
+        logger.debug(f"[形状-线条] 已创建: 从 ({config.x},{config.y}) 到 ({config.x2},{config.y2})mm")
+
     def to_dict(self):
-        """Серіалізація у dict"""
+        """序列化到 dict"""
         return {
             'type': 'line',
             'x': self.config.x,
@@ -289,10 +289,10 @@ class LineElement(BaseElement):
             'thickness': self.config.thickness,
             'color': self.config.color
         }
-    
+
     @classmethod
     def from_dict(cls, data):
-        """Десеріалізація з dict"""
+        """从 dict 反序列化"""
         config = LineConfig(
             x=data['x'],
             y=data['y'],
@@ -302,130 +302,130 @@ class LineElement(BaseElement):
             color=data.get('color', 'black')
         )
         return cls(config)
-    
+
     def to_zpl(self, dpi=203):
-        """Генерація ZPL команд для line
-        
-        Format: ^GD{width},{height},{thickness},{color},{orientation}
+        """生成线条的 ZPL 命令
+
+        格式: ^GD{宽度},{高度},{厚度},{颜色},{方向}
         """
-        # Конвертувати координати mm -> dots
+        # 转换坐标 mm -> dots
         x1_dots = int(self.config.x * dpi / 25.4)
         y1_dots = int(self.config.y * dpi / 25.4)
         x2_dots = int(self.config.x2 * dpi / 25.4)
         y2_dots = int(self.config.y2 * dpi / 25.4)
-        
-        # Обчислити width і height
+
+        # 计算宽度和高度
         width_dots = abs(x2_dots - x1_dots)
         height_dots = abs(y2_dots - y1_dots)
-        
-        logger.debug(f"[SHAPE-ZPL-LINE] From: ({x1_dots}, {y1_dots}) dots")
-        logger.debug(f"[SHAPE-ZPL-LINE] To: ({x2_dots}, {y2_dots}) dots")
-        logger.debug(f"[SHAPE-ZPL-LINE] Width: {width_dots}, Height: {height_dots} dots")
-        
-        # Thickness у dots
+
+        logger.debug(f"[形状-ZPL-线条] 从: ({x1_dots}, {y1_dots}) 点")
+        logger.debug(f"[形状-ZPL-线条] 到: ({x2_dots}, {y2_dots}) 点")
+        logger.debug(f"[形状-ZPL-线条] 宽度: {width_dots}, 高度: {height_dots} 点")
+
+        # 厚度（点）
         thickness = int(self.config.thickness * dpi / 25.4)
-        
-        # Color (B=black, W=white)
+
+        # 颜色 (B=黑色, W=白色)
         color = 'B' if self.config.color == 'black' else 'W'
-        
-        # Orientation: L (left lean \), R (right lean /)
-        # Визначаємо за знаком (x2-x1) та (y2-y1)
+
+        # 方向: L (左斜 \), R (右斜 /)
+        # 根据 (x2-x1) 和 (y2-y1) 的符号确定
         if (x2_dots >= x1_dots and y2_dots >= y1_dots) or (x2_dots < x1_dots and y2_dots < y1_dots):
-            orientation = 'R'  # Right lean /
+            orientation = 'R'  # 右斜 /
         else:
-            orientation = 'L'  # Left lean \
-        
-        logger.debug(f"[SHAPE-ZPL-LINE] Thickness={thickness}, orientation={orientation}")
-        
+            orientation = 'L'  # 左斜 \
+
+        logger.debug(f"[形状-ZPL-线条] 厚度={thickness}, 方向={orientation}")
+
         zpl_commands = [
             f"^FO{x1_dots},{y1_dots}",
             f"^GD{width_dots},{height_dots},{thickness},{color},{orientation}",
             "^FS"
         ]
-        
-        logger.debug(f"[SHAPE-ZPL-LINE] Generated ZPL")
+
+        logger.debug(f"[形状-ZPL-线条] 已生成 ZPL")
         return "\n".join(zpl_commands)
 
 
-# === GRAPHICS ITEMS ===
+# === 图形项 ===
 
 class GraphicsRectangleItem(QGraphicsRectItem):
-    """Graphics item для Rectangle на canvas"""
-    
+    """画布上矩形的图形项"""
+
     def __init__(self, element, dpi=203, canvas=None, parent=None):
         super().__init__(parent)
         self.element = element
         self.dpi = dpi
-        self.canvas = canvas  # Посилання на canvas для GridConfig
-        
-        # КРИТИЧНО: створити ПЕРЕД setPos()!
+        self.canvas = canvas  # 引用 canvas 用于 GridConfig
+
+        # 关键: 在 setPos() 之前创建！
         self.snap_enabled = True
         self.grid_step_mm = 1.0
         self.snap_threshold_mm = 1.0
-        
-        # Встановити розмір
+
+        # 设置尺寸
         width_px = self._mm_to_px(element.config.width)
         height_px = self._mm_to_px(element.config.height)
         self.setRect(0, 0, width_px, height_px)
-        
-        # Встановити стиль
+
+        # 设置样式
         self._update_style()
-        
-        # Встановити позицію
+
+        # 设置位置
         x_px = self._mm_to_px(element.config.x)
         y_px = self._mm_to_px(element.config.y)
         self.setPos(x_px, y_px)
-        
-        # Flags для drag and drop
+
+        # 拖放标志
         self.setFlags(
-            QGraphicsItem.ItemIsMovable | 
-            QGraphicsItem.ItemIsSelectable | 
+            QGraphicsItem.ItemIsMovable |
+            QGraphicsItem.ItemIsSelectable |
             QGraphicsItem.ItemSendsGeometryChanges
         )
-        
-        logger.debug(f"[SHAPE-ITEM-RECT] Created at: ({element.config.x:.2f}, {element.config.y:.2f})mm")
-    
+
+        logger.debug(f"[形状项-矩形] 已创建于: ({element.config.x:.2f}, {element.config.y:.2f})mm")
+
     def _update_style(self):
-        """Оновити стиль (fill/border)"""
+        """更新样式（填充/边框）"""
         color = QColor('black') if self.element.config.color == 'black' else QColor('white')
-        
+
         if self.element.config.fill:
-            # Fill
+            # 填充
             self.setBrush(QBrush(color))
             self.setPen(QPen(Qt.NoPen))
         else:
-            # Border
+            # 边框
             thickness_px = self._mm_to_px(self.element.config.border_thickness)
             self.setBrush(QBrush(Qt.NoBrush))
             self.setPen(QPen(color, thickness_px))
-        
-        logger.debug(f"[SHAPE-ITEM-RECT] Style updated: fill={self.element.config.fill}")
-    
+
+        logger.debug(f"[形状项-矩形] 样式已更新: 填充={self.element.config.fill}")
+
     def itemChange(self, change, value):
-        """Перевизначити для snap to grid"""
+        """重写用于网格对齐"""
         if change == QGraphicsItem.ItemPositionChange:
             new_pos = value
 
-            # Конвертувати у мм
+            # 转换为毫米
             x_mm = self._px_to_mm(new_pos.x())
             y_mm = self._px_to_mm(new_pos.y())
 
             logger.debug(
-                f"[ITEM-DRAG] Position changing: ({new_pos.x():.2f}, {new_pos.y():.2f})px -> "
+                f"[项目拖拽] 位置变化中: ({new_pos.x():.2f}, {new_pos.y():.2f})px -> "
                 f"({x_mm:.2f}, {y_mm:.2f})mm"
             )
 
-            # EMIT cursor position для rulers при drag
+            # 拖拽时发送光标位置给标尺
             if self.canvas:
-                logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
+                logger.debug(f"[项目拖拽] 发送光标: ({x_mm:.2f}, {y_mm:.2f})mm")
                 self.canvas.cursor_position_changed.emit(x_mm, y_mm)
 
             if self.snap_enabled:
-                # Snap до сітки (окремо для X та Y)
+                # 对齐到网格（分别处理 X 和 Y）
                 snapped_x = self._snap_to_grid(x_mm, 'x')
                 snapped_y = self._snap_to_grid(y_mm, 'y')
 
-                # Конвертувати назад у пікселі
+                # 转换回像素
                 snapped_pos = QPointF(
                     self._mm_to_px(snapped_x),
                     self._mm_to_px(snapped_y)
@@ -436,12 +436,12 @@ class GraphicsRectangleItem(QGraphicsRectItem):
             return new_pos
 
         elif change == QGraphicsItem.ItemPositionHasChanged:
-            # Оновити config після переміщення
+            # 移动后更新配置
             x_mm = self._px_to_mm(self.pos().x())
             y_mm = self._px_to_mm(self.pos().y())
 
             logger.debug(
-                f"[ITEM-DRAG] Position changed (raw): ({self.pos().x():.2f}, {self.pos().y():.2f})px -> "
+                f"[项目拖拽] 位置已改变（原始）: ({self.pos().x():.2f}, {self.pos().y():.2f})px -> "
                 f"({x_mm:.2f}, {y_mm:.2f})mm"
             )
 
@@ -454,7 +454,7 @@ class GraphicsRectangleItem(QGraphicsRectItem):
                 and self.isSelected()
             ):
                 logger.debug(
-                    f"[ITEM-DRAG] Position changed: bounds update needed "
+                    f"[项目拖拽] 位置已改变: 需要边界更新 "
                     f"({self.element.config.x:.2f}, {self.element.config.y:.2f})mm"
                 )
                 self.canvas.bounds_update_callback(self)
@@ -462,119 +462,119 @@ class GraphicsRectangleItem(QGraphicsRectItem):
         return super().itemChange(change, value)
 
     def _snap_to_grid(self, value_mm, axis='x'):
-        """Прив'язка до сітки з GridConfig (size, offset)"""
+        """使用 GridConfig（大小、偏移量）对齐到网格"""
         from config import SnapMode
-        
-        # Fallback для старих елементів без canvas
+
+        # 回退用于没有 canvas 的旧元素
         if not self.canvas:
-            logger.debug(f"[SNAP-FALLBACK] Using default: size=1.0mm, offset=0.0mm")
+            logger.debug(f"[对齐回退] 使用默认值: 大小=1.0mm, 偏移=0.0mm")
             size = 1.0
             offset = 0.0
             threshold = 1.0
         else:
             config = self.canvas.grid_config
-            
-            # Check snap mode
+
+            # 检查对齐模式
             if config.snap_mode != SnapMode.GRID:
-                logger.debug(f"[SNAP] Mode={config.snap_mode.value}, skipping grid snap")
+                logger.debug(f"[对齐] 模式={config.snap_mode.value}, 跳过网格对齐")
                 return value_mm
-            
+
             size = config.size_x_mm if axis == 'x' else config.size_y_mm
             offset = config.offset_x_mm if axis == 'x' else config.offset_y_mm
             threshold = size / 2
-            
-            logger.debug(f"[SNAP-{axis.upper()}] Value: {value_mm:.2f}mm, Offset: {offset:.2f}mm, Size: {size:.2f}mm")
-        
-        # Snap формула: nearest = offset + round((value - offset) / size) * size
+
+            logger.debug(f"[对齐-{axis.upper()}] 值: {value_mm:.2f}mm, 偏移: {offset:.2f}mm, 大小: {size:.2f}mm")
+
+        # 对齐公式: nearest = offset + round((value - offset) / size) * size
         relative = value_mm - offset
         rounded = round(relative / size) * size + offset
-        
-        logger.debug(f"[SNAP-{axis.upper()}] Relative: {relative:.2f}mm, Rounded: {rounded:.2f}mm")
-        
+
+        logger.debug(f"[对齐-{axis.upper()}] 相对: {relative:.2f}mm, 四舍五入: {rounded:.2f}mm")
+
         if abs(value_mm - rounded) <= threshold:
-            logger.debug(f"[SNAP-{axis.upper()}] Result: {value_mm:.2f}mm -> {rounded:.2f}mm")
+            logger.debug(f"[对齐-{axis.upper()}] 结果: {value_mm:.2f}mm -> {rounded:.2f}mm")
             return rounded
-        
-        logger.debug(f"[SNAP-{axis.upper()}] No snap (distance > threshold)")
+
+        logger.debug(f"[对齐-{axis.upper()}] 未对齐（距离 > 阈值）")
         return value_mm
-    
+
     def _mm_to_px(self, mm):
-        """Конвертація мм -> пікселі"""
+        """转换毫米 -> 像素"""
         return mm * self.dpi / 25.4
-    
+
     def _px_to_mm(self, px):
-        """Конвертація пікселі -> мм"""
+        """转换像素 -> 毫米"""
         return px * 25.4 / self.dpi
-    
+
     def update_from_element(self):
-        """Оновити graphics item з element config"""
+        """从元素配置更新图形项"""
         width_px = self._mm_to_px(self.element.config.width)
         height_px = self._mm_to_px(self.element.config.height)
         self.setRect(0, 0, width_px, height_px)
-        
+
         self._update_style()
-        
+
         x_px = self._mm_to_px(self.element.config.x)
         y_px = self._mm_to_px(self.element.config.y)
         self.setPos(x_px, y_px)
-        
-        logger.debug(f"[SHAPE-ITEM-RECT] Updated from element")
+
+        logger.debug(f"[形状项-矩形] 从元素更新")
 
 
 class GraphicsCircleItem(QGraphicsEllipseItem):
-    """Graphics item для Circle на canvas"""
-    
+    """画布上圆形的图形项"""
+
     def __init__(self, element, dpi=203, canvas=None, parent=None):
         super().__init__(parent)
         self.element = element
         self.dpi = dpi
-        self.canvas = canvas  # Посилання на canvas для GridConfig
-        
-        # КРИТИЧНО: створити ПЕРЕД setPos()!
+        self.canvas = canvas  # 引用 canvas 用于 GridConfig
+
+        # 关键: 在 setPos() 之前创建！
         self.snap_enabled = True
         self.grid_step_mm = 1.0
         self.snap_threshold_mm = 1.0
-        
-        # Встановити розмір (еліпс)
+
+        # 设置尺寸（椭圆）
         width_px = self._mm_to_px(element.config.width)
         height_px = self._mm_to_px(element.config.height)
         self.setRect(0, 0, width_px, height_px)
-        
-        # Встановити стиль
+
+        # 设置样式
         self._update_style()
-        
-        # Встановити позицію
+
+        # 设置位置
         x_px = self._mm_to_px(element.config.x)
         y_px = self._mm_to_px(element.config.y)
         self.setPos(x_px, y_px)
-        
-        # Flags для drag and drop
+
+        # 拖放标志
         self.setFlags(
-            QGraphicsItem.ItemIsMovable | 
-            QGraphicsItem.ItemIsSelectable | 
+            QGraphicsItem.ItemIsMovable |
+            QGraphicsItem.ItemIsSelectable |
             QGraphicsItem.ItemSendsGeometryChanges
         )
-        
-        logger.debug(f"[SHAPE-ITEM-CIRCLE] Created at: ({element.config.x:.2f}, {element.config.y:.2f})mm")
-    
+
+        logger.debug(f"[形状项-圆形] 已创建于: ({element.config.x:.2f}, {element.config.y:.2f})mm")
+
     def _update_style(self):
-        """Оновити стиль (fill/border)"""
+        """更新样式（填充/边框）"""
         color = QColor('black') if self.element.config.color == 'black' else QColor('white')
-        
+
         if self.element.config.fill:
-            # Fill
+            # 填充
             self.setBrush(QBrush(color))
             self.setPen(QPen(Qt.NoPen))
         else:
-            # Border
+            # 边框
             thickness_px = self._mm_to_px(self.element.config.border_thickness)
             self.setBrush(QBrush(Qt.NoBrush))
             self.setPen(QPen(color, thickness_px))
-        
-        logger.debug(f"[SHAPE-ITEM-CIRCLE] Style updated: fill={self.element.config.fill}")
-    
+
+        logger.debug(f"[形状项-圆形] 样式已更新: 填充={self.element.config.fill}")
+
     def itemChange(self, change, value):
-        """Перевизначити для snap to grid - аналогічно Rectangle"""
+        """重写用于网格对齐 - 类似于矩形"""
         if change == QGraphicsItem.ItemPositionChange:
             new_pos = value
 
@@ -582,13 +582,13 @@ class GraphicsCircleItem(QGraphicsEllipseItem):
             y_mm = self._px_to_mm(new_pos.y())
 
             logger.debug(
-                f"[ITEM-DRAG] Position changing: ({new_pos.x():.2f}, {new_pos.y():.2f})px -> "
+                f"[项目拖拽] 位置变化中: ({new_pos.x():.2f}, {new_pos.y():.2f})px -> "
                 f"({x_mm:.2f}, {y_mm:.2f})mm"
             )
 
-            # EMIT cursor position для rulers при drag
+            # 拖拽时发送光标位置给标尺
             if self.canvas:
-                logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
+                logger.debug(f"[项目拖拽] 发送光标: ({x_mm:.2f}, {y_mm:.2f})mm")
                 self.canvas.cursor_position_changed.emit(x_mm, y_mm)
 
             if self.snap_enabled:
@@ -609,7 +609,7 @@ class GraphicsCircleItem(QGraphicsEllipseItem):
             y_mm = self._px_to_mm(self.pos().y())
 
             logger.debug(
-                f"[ITEM-DRAG] Position changed (raw): ({self.pos().x():.2f}, {self.pos().y():.2f})px -> "
+                f"[项目拖拽] 位置已改变（原始）: ({self.pos().x():.2f}, {self.pos().y():.2f})px -> "
                 f"({x_mm:.2f}, {y_mm:.2f})mm"
             )
 
@@ -622,7 +622,7 @@ class GraphicsCircleItem(QGraphicsEllipseItem):
                 and self.isSelected()
             ):
                 logger.debug(
-                    f"[ITEM-DRAG] Position changed: bounds update needed "
+                    f"[项目拖拽] 位置已改变: 需要边界更新 "
                     f"({self.element.config.x:.2f}, {self.element.config.y:.2f})mm"
                 )
                 self.canvas.bounds_update_callback(self)
@@ -630,131 +630,131 @@ class GraphicsCircleItem(QGraphicsEllipseItem):
         return super().itemChange(change, value)
 
     def _snap_to_grid(self, value_mm, axis='x'):
-        """Прив'язка до сітки з GridConfig (size, offset)"""
+        """使用 GridConfig（大小、偏移量）对齐到网格"""
         from config import SnapMode
-        
-        # Fallback для старих елементів без canvas
+
+        # 回退用于没有 canvas 的旧元素
         if not self.canvas:
-            logger.debug(f"[SNAP-FALLBACK] Using default: size=1.0mm, offset=0.0mm")
+            logger.debug(f"[对齐回退] 使用默认值: 大小=1.0mm, 偏移=0.0mm")
             size = 1.0
             offset = 0.0
             threshold = 1.0
         else:
             config = self.canvas.grid_config
-            
-            # Check snap mode
+
+            # 检查对齐模式
             if config.snap_mode != SnapMode.GRID:
-                logger.debug(f"[SNAP] Mode={config.snap_mode.value}, skipping grid snap")
+                logger.debug(f"[对齐] 模式={config.snap_mode.value}, 跳过网格对齐")
                 return value_mm
-            
+
             size = config.size_x_mm if axis == 'x' else config.size_y_mm
             offset = config.offset_x_mm if axis == 'x' else config.offset_y_mm
             threshold = size / 2
-            
-            logger.debug(f"[SNAP-{axis.upper()}] Value: {value_mm:.2f}mm, Offset: {offset:.2f}mm, Size: {size:.2f}mm")
-        
-        # Snap формула: nearest = offset + round((value - offset) / size) * size
+
+            logger.debug(f"[对齐-{axis.upper()}] 值: {value_mm:.2f}mm, 偏移: {offset:.2f}mm, 大小: {size:.2f}mm")
+
+        # 对齐公式: nearest = offset + round((value - offset) / size) * size
         relative = value_mm - offset
         rounded = round(relative / size) * size + offset
-        
-        logger.debug(f"[SNAP-{axis.upper()}] Relative: {relative:.2f}mm, Rounded: {rounded:.2f}mm")
-        
+
+        logger.debug(f"[对齐-{axis.upper()}] 相对: {relative:.2f}mm, 四舍五入: {rounded:.2f}mm")
+
         if abs(value_mm - rounded) <= threshold:
-            logger.debug(f"[SNAP-{axis.upper()}] Result: {value_mm:.2f}mm -> {rounded:.2f}mm")
+            logger.debug(f"[对齐-{axis.upper()}] 结果: {value_mm:.2f}mm -> {rounded:.2f}mm")
             return rounded
-        
-        logger.debug(f"[SNAP-{axis.upper()}] No snap (distance > threshold)")
+
+        logger.debug(f"[对齐-{axis.upper()}] 未对齐（距离 > 阈值）")
         return value_mm
-    
+
     def _mm_to_px(self, mm):
-        """Конвертація мм -> пікселі"""
+        """转换毫米 -> 像素"""
         return mm * self.dpi / 25.4
-    
+
     def _px_to_mm(self, px):
-        """Конвертація пікселі -> мм"""
+        """转换像素 -> 毫米"""
         return px * 25.4 / self.dpi
-    
+
     def update_from_element(self):
-        """Оновити graphics item з element config"""
+        """从元素配置更新图形项"""
         width_px = self._mm_to_px(self.element.config.width)
         height_px = self._mm_to_px(self.element.config.height)
         self.setRect(0, 0, width_px, height_px)
-        
+
         self._update_style()
-        
+
         x_px = self._mm_to_px(self.element.config.x)
         y_px = self._mm_to_px(self.element.config.y)
         self.setPos(x_px, y_px)
-        
-        logger.debug(f"[SHAPE-ITEM-CIRCLE] Updated from element")
+
+        logger.debug(f"[形状项-圆形] 从元素更新")
 
 
 class GraphicsLineItem(QGraphicsLineItem):
-    """Graphics item для Line на canvas"""
-    
+    """画布上线条的图形项"""
+
     def __init__(self, element, dpi=203, canvas=None, parent=None):
         super().__init__(parent)
         self.element = element
         self.dpi = dpi
-        self.canvas = canvas  # Посилання на canvas для GridConfig
-        
-        # КРИТИЧНО: створити ПЕРЕД setPos()!
+        self.canvas = canvas  # 引用 canvas 用于 GridConfig
+
+        # 关键: 在 setPos() 之前创建！
         self.snap_enabled = True
         self.grid_step_mm = 1.0
         self.snap_threshold_mm = 1.0
-        
-        # Встановити лінію - використовуємо RELATIVE координати
+
+        # 设置线条 - 使用相对坐标
         x1_px = self._mm_to_px(element.config.x)
         y1_px = self._mm_to_px(element.config.y)
         x2_px = self._mm_to_px(element.config.x2)
         y2_px = self._mm_to_px(element.config.y2)
-        
-        # КРИТИЧНО: setPos() = start point (absolute), setLine() = line vector (relative)
+
+        # 关键: setPos() = 起点（绝对坐标）, setLine() = 线条向量（相对坐标）
         self.setPos(x1_px, y1_px)
         self.setLine(0, 0, x2_px - x1_px, y2_px - y1_px)
-        
-        logger.debug(f"[LINE-COORDS] Element: ({element.config.x:.2f}, {element.config.y:.2f}) -> ({element.config.x2:.2f}, {element.config.y2:.2f})mm")
-        logger.debug(f"[LINE-COORDS] setPos: ({x1_px:.2f}, {y1_px:.2f})px")
-        logger.debug(f"[LINE-COORDS] setLine: (0, 0) -> ({x2_px - x1_px:.2f}, {y2_px - y1_px:.2f})px")
-        
-        # Встановити стиль
+
+        logger.debug(f"[线条坐标] 元素: ({element.config.x:.2f}, {element.config.y:.2f}) -> ({element.config.x2:.2f}, {element.config.y2:.2f})mm")
+        logger.debug(f"[线条坐标] setPos: ({x1_px:.2f}, {y1_px:.2f})px")
+        logger.debug(f"[线条坐标] setLine: (0, 0) -> ({x2_px - x1_px:.2f}, {y2_px - y1_px:.2f})px")
+
+        # 设置样式
         self._update_style()
-        
-        # Flags для drag and drop
+
+        # 拖放标志
         self.setFlags(
-            QGraphicsItem.ItemIsMovable | 
-            QGraphicsItem.ItemIsSelectable | 
+            QGraphicsItem.ItemIsMovable |
+            QGraphicsItem.ItemIsSelectable |
             QGraphicsItem.ItemSendsGeometryChanges
         )
-        
-        logger.debug(f"[SHAPE-ITEM-LINE] Created: from ({element.config.x:.2f},{element.config.y:.2f}) to ({element.config.x2:.2f},{element.config.y2:.2f})mm")
-    
+
+        logger.debug(f"[形状项-线条] 已创建: 从 ({element.config.x:.2f},{element.config.y:.2f}) 到 ({element.config.x2:.2f},{element.config.y2:.2f})mm")
+
     def _update_style(self):
-        """Оновити стиль (thickness, color)"""
+        """更新样式（厚度、颜色）"""
         color = QColor('black') if self.element.config.color == 'black' else QColor('white')
         thickness_px = self._mm_to_px(self.element.config.thickness)
-        
+
         self.setPen(QPen(color, thickness_px))
-        
-        logger.debug(f"[SHAPE-ITEM-LINE] Style updated: thickness={self.element.config.thickness}mm")
-    
+
+        logger.debug(f"[形状项-线条] 样式已更新: 厚度={self.element.config.thickness}mm")
+
     def itemChange(self, change, value):
-        """Перевизначити для snap to grid"""
+        """重写用于网格对齐"""
         if change == QGraphicsItem.ItemPositionChange:
-            # Line має складнішу логіку snap - snap обох кінців
-            # Тут спрощена версія - snap тільки start point
+            # 线条有更复杂的对齐逻辑 - 对齐两个端点
+            # 这里是简化版本 - 只对齐起点
             new_pos = value
 
             x_mm = self._px_to_mm(new_pos.x())
             y_mm = self._px_to_mm(new_pos.y())
 
             logger.debug(
-                f"[ITEM-DRAG] Position changing: start -> ({x_mm:.2f}, {y_mm:.2f})mm"
+                f"[项目拖拽] 位置变化中: 起点 -> ({x_mm:.2f}, {y_mm:.2f})mm"
             )
 
-            # EMIT cursor position для rulers при drag
+            # 拖拽时发送光标位置给标尺
             if self.canvas:
-                logger.debug(f"[ITEM-DRAG] Emitting cursor: ({x_mm:.2f}, {y_mm:.2f})mm")
+                logger.debug(f"[项目拖拽] 发送光标: ({x_mm:.2f}, {y_mm:.2f})mm")
                 self.canvas.cursor_position_changed.emit(x_mm, y_mm)
 
             if self.snap_enabled:
@@ -771,8 +771,8 @@ class GraphicsLineItem(QGraphicsLineItem):
             return new_pos
 
         elif change == QGraphicsItem.ItemPositionHasChanged:
-            # Оновити config після переміщення
-            # Line config зберігає абсолютні координати
+            # 移动后更新配置
+            # 线条配置保存绝对坐标
             line_in_scene = self.line()
             x1_mm = self._px_to_mm(line_in_scene.x1() + self.pos().x())
             y1_mm = self._px_to_mm(line_in_scene.y1() + self.pos().y())
@@ -780,8 +780,8 @@ class GraphicsLineItem(QGraphicsLineItem):
             y2_mm = self._px_to_mm(line_in_scene.y2() + self.pos().y())
 
             logger.debug(
-                f"[ITEM-DRAG] Position changed (line): start=({x1_mm:.2f}, {y1_mm:.2f})mm, "
-                f"end=({x2_mm:.2f}, {y2_mm:.2f})mm"
+                f"[项目拖拽] 位置已改变（线条）: 起点=({x1_mm:.2f}, {y1_mm:.2f})mm, "
+                f"终点=({x2_mm:.2f}, {y2_mm:.2f})mm"
             )
 
             self.element.config.x = x1_mm
@@ -795,71 +795,71 @@ class GraphicsLineItem(QGraphicsLineItem):
                 and self.isSelected()
             ):
                 logger.debug(
-                    f"[ITEM-DRAG] Position changed: bounds update needed "
-                    f"start=({self.element.config.x:.2f}, {self.element.config.y:.2f})mm"
+                    f"[项目拖拽] 位置已改变: 需要边界更新 "
+                    f"起点=({self.element.config.x:.2f}, {self.element.config.y:.2f})mm"
                 )
                 self.canvas.bounds_update_callback(self)
 
         return super().itemChange(change, value)
 
     def _snap_to_grid(self, value_mm, axis='x'):
-        """Прив'язка до сітки з GridConfig (size, offset)"""
+        """使用 GridConfig（大小、偏移量）对齐到网格"""
         from config import SnapMode
-        
-        # Fallback для старих елементів без canvas
+
+        # 回退用于没有 canvas 的旧元素
         if not self.canvas:
-            logger.debug(f"[SNAP-FALLBACK] Using default: size=1.0mm, offset=0.0mm")
+            logger.debug(f"[对齐回退] 使用默认值: 大小=1.0mm, 偏移=0.0mm")
             size = 1.0
             offset = 0.0
             threshold = 1.0
         else:
             config = self.canvas.grid_config
-            
-            # Check snap mode
+
+            # 检查对齐模式
             if config.snap_mode != SnapMode.GRID:
-                logger.debug(f"[SNAP] Mode={config.snap_mode.value}, skipping grid snap")
+                logger.debug(f"[对齐] 模式={config.snap_mode.value}, 跳过网格对齐")
                 return value_mm
-            
+
             size = config.size_x_mm if axis == 'x' else config.size_y_mm
             offset = config.offset_x_mm if axis == 'x' else config.offset_y_mm
             threshold = size / 2
-            
-            logger.debug(f"[SNAP-{axis.upper()}] Value: {value_mm:.2f}mm, Offset: {offset:.2f}mm, Size: {size:.2f}mm")
-        
-        # Snap формула: nearest = offset + round((value - offset) / size) * size
+
+            logger.debug(f"[对齐-{axis.upper()}] 值: {value_mm:.2f}mm, 偏移: {offset:.2f}mm, 大小: {size:.2f}mm")
+
+        # 对齐公式: nearest = offset + round((value - offset) / size) * size
         relative = value_mm - offset
         rounded = round(relative / size) * size + offset
-        
-        logger.debug(f"[SNAP-{axis.upper()}] Relative: {relative:.2f}mm, Rounded: {rounded:.2f}mm")
-        
+
+        logger.debug(f"[对齐-{axis.upper()}] 相对: {relative:.2f}mm, 四舍五入: {rounded:.2f}mm")
+
         if abs(value_mm - rounded) <= threshold:
-            logger.debug(f"[SNAP-{axis.upper()}] Result: {value_mm:.2f}mm -> {rounded:.2f}mm")
+            logger.debug(f"[对齐-{axis.upper()}] 结果: {value_mm:.2f}mm -> {rounded:.2f}mm")
             return rounded
-        
-        logger.debug(f"[SNAP-{axis.upper()}] No snap (distance > threshold)")
+
+        logger.debug(f"[对齐-{axis.upper()}] 未对齐（距离 > 阈值）")
         return value_mm
-    
+
     def _mm_to_px(self, mm):
-        """Конвертація мм -> пікселі"""
+        """转换毫米 -> 像素"""
         return mm * self.dpi / 25.4
-    
+
     def _px_to_mm(self, px):
-        """Конвертація пікселі -> мм"""
+        """转换像素 -> 毫米"""
         return px * 25.4 / self.dpi
-    
+
     def update_from_element(self):
-        """Оновити graphics item з element config"""
+        """从元素配置更新图形项"""
         x1_px = self._mm_to_px(self.element.config.x)
         y1_px = self._mm_to_px(self.element.config.y)
         x2_px = self._mm_to_px(self.element.config.x2)
         y2_px = self._mm_to_px(self.element.config.y2)
-        
-        # КРИТИЧНО: використовувати RELATIVE координати для setLine
+
+        # 关键: 使用 RELATIVE 坐标用于 setLine
         self.setPos(x1_px, y1_px)
         self.setLine(0, 0, x2_px - x1_px, y2_px - y1_px)
         self._update_style()
-        
-        logger.debug(f"[LINE-UPDATE] Element: ({self.element.config.x:.2f}, {self.element.config.y:.2f}) -> ({self.element.config.x2:.2f}, {self.element.config.y2:.2f})mm")
-        logger.debug(f"[LINE-UPDATE] setPos: ({x1_px:.2f}, {y1_px:.2f})px")
-        logger.debug(f"[LINE-UPDATE] setLine: (0, 0) -> ({x2_px - x1_px:.2f}, {y2_px - y1_px:.2f})px")
-        logger.debug(f"[SHAPE-ITEM-LINE] Updated from element")
+
+        logger.debug(f"[线条更新] 元素: ({self.element.config.x:.2f}, {self.element.config.y:.2f}) -> ({self.element.config.x2:.2f}, {self.element.config.y2:.2f})mm")
+        logger.debug(f"[线条更新] setPos: ({x1_px:.2f}, {y1_px:.2f})px")
+        logger.debug(f"[线条更新] setLine: (0, 0) -> ({x2_px - x1_px:.2f}, {y2_px - y1_px:.2f})px")
+        logger.debug(f"[形状项-线条] 从元素更新")

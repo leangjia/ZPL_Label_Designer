@@ -1,135 +1,136 @@
 # -*- coding: utf-8 -*-
-"""Клиент для Labelary API (preview ZPL)"""
+"""Labelary API 客户端 (ZPL 预览)"""
 
 import requests
 from PIL import Image
 from io import BytesIO
 from utils.logger import logger
 
+
 class LabelaryClient:
-    """Клиент для получения preview через Labelary API"""
-    
+    """通过 Labelary API 获取预览的客户端"""
+
     BASE_URL = "http://api.labelary.com/v1/printers"
-    
-    # Валидные значения dpmm для Labelary API
+
+    # Labelary API 的有效 dpmm 值
     VALID_DPMM = [6, 8, 12, 24]
-    
+
     def __init__(self, dpi=203):
         self.dpi = dpi
-        logger.info(f"LabelaryClient initialized with DPI {dpi}")
-    
+        logger.info(f"Labelary客户端已初始化，DPI: {dpi}")
+
     def _get_valid_dpmm(self, dpi: int) -> int:
         """
-        Получить ближайшее валидное значение dpmm для Labelary API
-        
-        Labelary принимает ТОЛЬКО: 6, 8, 12, 24 dpmm
-        
+        获取 Labelary API 最接近的有效 dpmm 值
+
+        Labelary 仅接受: 6, 8, 12, 24 dpmm
+
         Args:
-            dpi: DPI принтера
-            
+            dpi: 打印机 DPI
+
         Returns:
-            Ближайшее валидное значение dpmm
+            最接近的有效 dpmm 值
         """
         calculated_dpmm = dpi / 25.4
-        
-        # Найти ближайшее валидное значение
+
+        # 找到最接近的有效值
         closest_dpmm = min(self.VALID_DPMM, key=lambda x: abs(x - calculated_dpmm))
-        
-        logger.info(f"DPI {dpi} -> calculated {calculated_dpmm:.2f} dpmm -> using valid {closest_dpmm} dpmm")
-        
+
+        logger.info(f"DPI {dpi} -> 计算值 {calculated_dpmm:.2f} dpmm -> 使用有效值 {closest_dpmm} dpmm")
+
         return closest_dpmm
-    
+
     def preview(self, zpl_code: str, width_mm: float, height_mm: float) -> Image:
         """
-        Получить PNG preview этикетки
-        
+        获取标签的 PNG 预览
+
         Args:
-            zpl_code: ZPL код
-            width_mm: Ширина в мм
-            height_mm: Высота в мм
-        
+            zpl_code: ZPL 代码
+            width_mm: 宽度（毫米）
+            height_mm: 高度（毫米）
+
         Returns:
-            PIL Image или None при ошибке
+            PIL Image 或出错时返回 None
         """
-        logger.info("="*60)
-        logger.info("LABELARY PREVIEW REQUEST")
-        logger.info("="*60)
-        
+        logger.info("=" * 60)
+        logger.info("LABELARY 预览请求")
+        logger.info("=" * 60)
+
         try:
-            # === КОНВЕРТАЦИЯ ЕДИНИЦ ===
+            # === 单位转换 ===
             width_inch = width_mm / 25.4
             height_inch = height_mm / 25.4
             dpmm = self._get_valid_dpmm(self.dpi)
-            
-            logger.info(f"Input dimensions: {width_mm}mm x {height_mm}mm")
-            logger.info(f"Converted to inches: {width_inch:.2f} x {height_inch:.2f}")
-            logger.info(f"Using valid dpmm: {dpmm} (from DPI {self.dpi})")
-            
-            # === ФОРМИРОВАНИЕ URL ===
+
+            logger.info(f"输入尺寸: {width_mm}mm x {height_mm}mm")
+            logger.info(f"转换为英寸: {width_inch:.2f} x {height_inch:.2f}")
+            logger.info(f"使用有效 dpmm: {dpmm} (来自 DPI {self.dpi})")
+
+            # === 构建 URL ===
             url = f"{self.BASE_URL}/{dpmm}dpmm/labels/{width_inch:.2f}x{height_inch:.2f}/0/"
             logger.info(f"API URL: {url}")
-            
-            # === ZPL КОД ===
-            logger.info(f"ZPL code length: {len(zpl_code)} bytes")
-            logger.debug("ZPL code content:")
+
+            # === ZPL 代码 ===
+            logger.info(f"ZPL 代码长度: {len(zpl_code)} 字节")
+            logger.debug("ZPL 代码内容:")
             logger.debug("-" * 40)
             for line in zpl_code.split('\n'):
                 logger.debug(line)
             logger.debug("-" * 40)
-            
-            # === ЗАГОЛОВКИ ЗАПРОСА ===
+
+            # === 请求头 ===
             headers = {'Accept': 'image/png'}
-            logger.info(f"Request headers: {headers}")
-            
-            # === ОТПРАВКА ЗАПРОСА ===
-            logger.info("Sending POST request to Labelary API...")
-            
+            logger.info(f"请求头: {headers}")
+
+            # === 发送请求 ===
+            logger.info("正在向 Labelary API 发送 POST 请求...")
+
             response = requests.post(
                 url,
                 data=zpl_code.encode('utf-8'),
                 headers=headers,
                 timeout=10
             )
-            
-            # === ОТВЕТ ОТ API ===
-            logger.info(f"Response status code: {response.status_code}")
-            logger.info(f"Response headers: {dict(response.headers)}")
-            
+
+            # === API 响应 ===
+            logger.info(f"响应状态码: {response.status_code}")
+            logger.info(f"响应头: {dict(response.headers)}")
+
             if response.status_code == 200:
-                logger.info(f"Response content length: {len(response.content)} bytes")
-                logger.info("Preview generated successfully [+]")
-                logger.info("="*60)
+                logger.info(f"响应内容长度: {len(response.content)} 字节")
+                logger.info("预览生成成功 [+]")
+                logger.info("=" * 60)
                 return Image.open(BytesIO(response.content))
             else:
-                # Детальная информация об ошибке
-                logger.error(f"Labelary API returned error code: {response.status_code}")
-                logger.error(f"Response content type: {response.headers.get('content-type', 'unknown')}")
-                logger.error(f"Response body length: {len(response.content)} bytes")
-                
-                # Попытаться показать текст ошибки
+                # 错误详细信息
+                logger.error(f"Labelary API 返回错误代码: {response.status_code}")
+                logger.error(f"响应内容类型: {response.headers.get('content-type', 'unknown')}")
+                logger.error(f"响应体长度: {len(response.content)} 字节")
+
+                # 尝试显示错误文本
                 try:
                     error_text = response.text
-                    logger.error("Response body:")
+                    logger.error("响应体:")
                     logger.error("-" * 40)
                     logger.error(error_text)
                     logger.error("-" * 40)
                 except:
-                    logger.error("Could not decode response body as text")
-                
-                logger.info("="*60)
+                    logger.error("无法将响应体解码为文本")
+
+                logger.info("=" * 60)
                 return None
-        
+
         except requests.exceptions.Timeout:
-            logger.error("Request timeout (>10 seconds)")
-            logger.info("="*60)
+            logger.error("请求超时 (>10 秒)")
+            logger.info("=" * 60)
             return None
-        
+
         except requests.exceptions.ConnectionError as e:
-            logger.error(f"Connection error: {e}")
-            logger.info("="*60)
+            logger.error(f"连接错误: {e}")
+            logger.info("=" * 60)
             return None
-        
+
         except Exception as e:
-            logger.error(f"Unexpected exception during preview: {e}", exc_info=True)
-            logger.info("="*60)
+            logger.error(f"预览过程中出现意外异常: {e}", exc_info=True)
+            logger.info("=" * 60)
             return None

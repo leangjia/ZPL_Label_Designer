@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-"""GUI модуль для ZPL Label Designer"""
+"""ZPL 标签设计器的 GUI 模块"""

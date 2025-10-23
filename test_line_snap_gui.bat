@@ -1,34 +1,34 @@
 @echo off
-REM Quick launcher для GUI тестирования Line Snap
+REM 用于GUI测试Line Snap的快速启动器
 
 echo ================================================
-echo   1C_ZEBRA - GUI TEST: Line Snap Both Ends
+echo   1C_ZEBRA - GUI测试: Line Snap Both Ends
 echo ================================================
 echo.
 
 cd /d D:\AiKlientBank\1C_Zebra
 
-echo [1] Activating venv...
+echo [1] 正在激活虚拟环境...
 call .venv\Scripts\activate.bat
 
-echo [2] Launching GUI...
+echo [2] 正在启动GUI...
 echo.
-echo ТЕСТ-КЕЙС: Line Snap to Grid - Both Ends
+echo 测试用例: Line Snap to Grid - Both Ends
 echo -----------------------------------------
-echo 1. Добавь Line элемент (Sidebar или Menu)
-echo 2. Drag Line на canvas
-echo 3. Проверь Property Panel:
-echo    - Position X, Y (start) должны быть кратны 1mm
-echo    - End X, End Y (end) должны быть кратны 1mm
-echo 4. Toggle Snap (Ctrl+G) для проверки On/Off
+echo 1. 添加Line元素（通过侧边栏或菜单）
+echo 2. 将Line拖拽到画布上
+echo 3. 检查属性面板：
+echo    - 起始位置X、Y坐标应为1mm的倍数
+echo    - 结束位置X、Y坐标应为1mm的倍数
+echo 4. 切换吸附功能（Ctrl+G）以测试开启/关闭状态
 echo.
-echo После теста закрой окно.
+echo 测试完成后请关闭窗口。
 echo.
 
 python main.py
 
 echo.
 echo ================================================
-echo   GUI закрыт
+echo   GUI已关闭
 echo ================================================
 pause
