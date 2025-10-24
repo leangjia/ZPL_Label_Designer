@@ -1,41 +1,41 @@
-# ПРОМПТ: Доробка тесту інтеграції з 1С
+# 提示：完善1C集成测试
 
-## 🎯 ЗАВДАННЯ
+## 🎯 任务
 
-Доробити умний тест `test_1c_integration_smart.py` за прикладом робочого тесту `test_cursor_tracking_smart.py`.
+按照工作测试 `test_cursor_tracking_smart.py` 的示例，完善智能测试 `test_1c_integration_smart.py`。
 
-## 🔴 КРИТИЧНА ПРОБЛЕМА
+## 🔴 关键问题
 
-**Тест НЕ створює файл `temp_1c_test.json` перед запуском!**
+**测试在启动前没有创建 `temp_1c_test.json` 文件！**
 
 ```python
-# ❌ НЕПРАВИЛЬНО (поточний код):
+# ❌ 错误 (当前代码):
 temp_json = project_root / "temp_1c_test.json"
 print(f"[TEST] Test JSON: {temp_json}")
 
-# Запускаємо MainWindow з НЕІСНУЮЧИМ файлом!
+# 用不存在的文件启动 MainWindow！
 window = MainWindow(template_file=str(temp_json))  # ← FileNotFoundError!
 ```
 
-**Результат:** `_load_template_from_file()` падає з помилкою, логи `[1C-IMPORT]` НЕ з'являються, тест FAIL.
+**结果：** `_load_template_from_file()` 崩溃并报错，`[1C-IMPORT]` 日志不出现，测试失败。
 
 ---
 
-## 📖 КОНТЕКСТ
+## 📖 上下文
 
-### Як працює загрузка з 1С:
+### 1C 加载的工作原理：
 
 **1. MainWindow.__init__(template_file=...)**
 ```python
 def __init__(self, template_file=None):
-    # ... ініціалізація UI ...
+    # ... UI 初始化 ...
     
-    # Зберігаємо шлях до файлу
+    # 保存文件路径
     self._template_file_to_load = template_file
     
-    # ... створення елементів ...
+    # ... 创建元素 ...
     
-    # В КІНЦІ __init__ викликається завантаження:
+    # 在 __init__ 结束时调用加载：
     if self._template_file_to_load:
         self._load_template_from_file(self._template_file_to_load)
 ```
@@ -43,58 +43,58 @@ def __init__(self, template_file=None):
 **2. TemplateMixin._load_template_from_file(filepath)**
 ```python
 def _load_template_from_file(self, filepath):
-    """Завантажити шаблон з файлу (для 1С інтеграції)"""
+    """从文件加载模板 (用于1C集成)"""
     try:
-        logger.info(f"[1C-IMPORT] Loading template from: {filepath}")
+        logger.info(f"[1C-IMPORT] 正在从文件加载模板: {filepath}")
         
-        # Читаємо JSON
+        # 读取 JSON
         with open(filepath, 'r', encoding='utf-8') as f:
             json_data = json.load(f)
         
-        logger.info(f"[1C-IMPORT] JSON loaded: {json_data.get('name', 'unnamed')}")
+        logger.info(f"[1C-IMPORT] JSON 已加载: {json_data.get('name', 'unnamed')}")
         
-        # Перевіряємо структуру
+        # 检查结构
         if 'zpl' not in json_data:
-            logger.warning("[1C-IMPORT] No ZPL code in JSON")
-            QMessageBox.warning(self, "Import", "В JSON нет ZPL кода")
+            logger.warning("[1C-IMPORT] JSON 中没有 ZPL 代码")
+            QMessageBox.warning(self, "导入", "JSON 中没有 ZPL 代码")
             return
         
-        # Показуємо діалог з ZPL
+        # 显示带 ZPL 的对话框
         dialog = QDialog(self)
-        dialog.setWindowTitle("Шаблон з 1С")
-        # ... створення діалогу ...
+        dialog.setWindowTitle("来自 1C 的模板")
+        # ... 创建对话框 ...
         dialog.exec()
         
-        logger.info("[1C-IMPORT] Template displayed successfully")
+        logger.info("[1C-IMPORT] 模板显示成功")
         
     except Exception as e:
-        logger.error(f"[1C-IMPORT] Failed to load: {e}", exc_info=True)
-        QMessageBox.critical(self, "Import Error", f"Помилка завантаження:\n{e}")
+        logger.error(f"[1C-IMPORT] 加载失败: {e}", exc_info=True)
+        QMessageBox.critical(self, "导入错误", f"加载错误:\n{e}")
 ```
 
-**3. Логи які шукає LogAnalyzer:**
+**3. LogAnalyzer 寻找的日志：**
 ```python
 @staticmethod
 def parse_1c_logs(log_content):
-    """Витягти логи [1C-IMPORT]"""
+    """提取 [1C-IMPORT] 日志"""
     logs = {
-        'loading': [],   # [1C-IMPORT] Loading template from: {filepath}
-        'loaded': [],    # [1C-IMPORT] JSON loaded: {name}
-        'displayed': []  # [1C-IMPORT] Template displayed successfully
+        'loading': [],   # [1C-IMPORT] 正在从文件加载模板: {filepath}
+        'loaded': [],    # [1C-IMPORT] JSON 已加载: {name}
+        'displayed': []  # [1C-IMPORT] 模板显示成功
     }
-    # ... парсинг регулярками ...
+    # ... 正则解析 ...
     return logs
 ```
 
 ---
 
-## ✅ РОБОЧИЙ ПРИКЛАД (test_cursor_tracking_smart.py)
+## ✅ 工作示例 (test_cursor_tracking_smart.py)
 
-### Структура робочого тесту:
+### 工作测试结构：
 
 ```python
 def test_cursor_smart():
-    """Умний тест cursor tracking з аналізом логів"""
+    """光标跟踪智能测试与日志分析"""
     
     log_file = Path(r'D:\AiKlientBank\1C_Zebra\logs\zpl_designer.log')
     log_file.parent.mkdir(exist_ok=True)
@@ -104,10 +104,10 @@ def test_cursor_smart():
     window.show()
     app.processEvents()
     
-    # 1. РОЗМІР ФАЙЛУ ЛОГІВ ДО ТЕСТУ
+    # 1. 测试前的日志文件大小
     file_size_before = log_file.stat().st_size if log_file.exists() else 0
     
-    # 2. СИМУЛЯЦІЯ ДІЇ: Створюємо QMouseEvent і викликаємо НАПРЯМУ
+    # 2. 模拟操作：创建 QMouseEvent 并直接调用
     from PySide6.QtGui import QMouseEvent
     from PySide6.QtCore import QEvent, QPoint
     
@@ -118,57 +118,57 @@ def test_cursor_smart():
         Qt.NoButton,
         Qt.NoModifier
     )
-    window.canvas.mouseMoveEvent(mouse_event)  # ← ПРЯМИЙ ВИКЛИК!
+    window.canvas.mouseMoveEvent(mouse_event)  # ← 直接调用！
     app.processEvents()
     
-    # 3. ЧИТАЄМО НОВІ ЛОГИ (через seek!)
+    # 3. 读取新日志 (通过 seek!)
     with open(log_file, 'r', encoding='utf-8') as f:
-        f.seek(file_size_before)  # ← КРИТИЧНО: НЕ видаляти файл!
+        f.seek(file_size_before)  # ← 关键：不删除文件！
         new_logs = f.read()
     
-    # 4. АНАЛІЗ ЛОГІВ
+    # 4. 日志分析
     analyzer = CursorLogAnalyzer()
     cursor_logs = analyzer.parse_cursor_logs(new_logs)
     ruler_logs = analyzer.parse_ruler_logs(new_logs)
     issues = analyzer.detect_issues(cursor_logs, ruler_logs)
     
-    # 5. ДЕТАЛЬНИЙ ВИВІД З ЧИСЛАМИ
+    # 5. 带数字的详细输出
     print("=" * 60)
-    print("[STAGE 1] CURSOR TRACKING - LOG ANALYSIS")
+    print("[阶段 1] 光标跟踪 - 日志分析")
     print("=" * 60)
-    print(f"\n[CURSOR] signals: {len(cursor_logs)}")
-    print(f"[RULER-H] updates: {len(ruler_logs['h_update'])}")
+    print(f"\n[光标] 信号: {len(cursor_logs)}")
+    print(f"[标尺-H] 更新: {len(ruler_logs['h_update'])}")
     
     if cursor_logs:
         last = cursor_logs[-1]
-        print(f"Last cursor position: {last[0]:.2f}mm, {last[1]:.2f}mm")
+        print(f"最后光标位置: {last[0]:.2f}mm, {last[1]:.2f}mm")
     
     if issues:
-        print(f"\nDETECTED {len(issues)} ISSUE(S):")
+        print(f"\n检测到 {len(issues)} 个问题:")
         for issue in issues:
             print(f"  {issue['type']}: {issue['desc']}")
-        print("\n[FAILURE] CURSOR TRACKING HAS ISSUES")
+        print("\n[失败] 光标跟踪存在问题")
         return 1
     
-    print("\n[OK] Cursor tracking works correctly")
+    print("\n[成功] 光标跟踪工作正常")
     return 0
 ```
 
-**Ключові особливості:**
-1. ✅ `file_size_before = log_file.stat().st_size` - НЕ видаляємо файл!
-2. ✅ `f.seek(file_size_before)` - читаємо тільки нові логи
-3. ✅ Прямий виклик обробника: `window.canvas.mouseMoveEvent(event)`
-4. ✅ Детальний вивід з ЧИСЛАМИ: `{len(cursor_logs)}`, `{last[0]:.2f}mm`
-5. ✅ Аналіз КІЛЬКОХ типів логів: cursor_logs, ruler_logs
-6. ✅ Детектування КІЛЬКОХ типів проблем через `detect_issues()`
+**关键特性：**
+1. ✅ `file_size_before = log_file.stat().st_size` - 不删除文件！
+2. ✅ `f.seek(file_size_before)` - 只读取新日志
+3. ✅ 直接调用处理程序：`window.canvas.mouseMoveEvent(event)`
+4. ✅ 带数字的详细输出：`{len(cursor_logs)}`, `{last[0]:.2f}mm`
+5. ✅ 分析多种日志类型：cursor_logs, ruler_logs
+6. ✅ 通过 `detect_issues()` 检测多种问题类型
 
 ---
 
-## 🔧 ЩО ПОТРІБНО ВИПРАВИТИ
+## 🔧 需要修复的内容
 
-### 1. Створити temp_1c_test.json ПЕРЕД тестом
+### 1. 在测试前创建 temp_1c_test.json
 
-**Структура JSON файлу (з Python редактора):**
+**JSON 文件结构 (来自 Python 编辑器)：**
 ```json
 {
     "name": "TEST_TEMPLATE_1C",
@@ -180,19 +180,19 @@ def test_cursor_smart():
 }
 ```
 
-**Додати в тест:**
+**添加到测试中：**
 ```python
 def test_1c_integration_smart():
-    """Умний тест завантаження з 1С"""
+    """1C 集成智能测试"""
     
     print("\n" + "="*60)
-    print("SMART TEST: 1C Integration - Template Loading")
+    print("智能测试: 1C 集成 - 模板加载")
     print("="*60)
     
     log_file = project_root / "logs" / "zpl_designer.log"
     log_file.parent.mkdir(exist_ok=True)
     
-    # ✅ СТВОРЮЄМО ТЕСТОВИЙ JSON (НОВИЙ КОД!)
+    # ✅ 创建测试 JSON (新代码！)
     temp_json = project_root / "temp_1c_test.json"
     test_template = {
         "name": "TEST_TEMPLATE_1C",
@@ -207,21 +207,21 @@ def test_1c_integration_smart():
     with open(temp_json, 'w', encoding='utf-8') as f:
         json.dump(test_template, f, indent=2, ensure_ascii=False)
     
-    print(f"[TEST] Test JSON created: {temp_json}")
-    print(f"[TEST] Template name: {test_template['name']}")
+    print(f"[测试] 测试 JSON 已创建: {temp_json}")
+    print(f"[测试] 模板名称: {test_template['name']}")
     
-    # Розмір файлу ДО тесту
+    # 测试前的文件大小
     file_size_before = log_file.stat().st_size if log_file.exists() else 0
-    print(f"[TEST] Log file size before: {file_size_before} bytes")
+    print(f"[测试] 测试前日志文件大小: {file_size_before} 字节")
     
-    # ... решта коду ...
+    # ... 其余代码 ...
 ```
 
-### 2. Покращити вивід результатів (як у cursor test)
+### 2. 改进结果输出 (像光标测试一样)
 
-**Замінити:**
+**替换：**
 ```python
-# ❌ СТАРИЙ КОД (простий вивід):
+# ❌ 旧代码 (简单输出):
 print(f"Loading logs: {len(logs['loading'])}")
 if logs['loading']:
     print(f"  Path: {logs['loading'][0]}")
@@ -233,87 +233,87 @@ if logs['loaded']:
 print(f"Displayed logs: {len(logs['displayed'])}")
 ```
 
-**На:**
+**为：**
 ```python
-# ✅ НОВИЙ КОД (детальний вивід):
+# ✅ 新代码 (详细输出):
 print("\n" + "="*60)
-print("[1C-IMPORT] LOG ANALYSIS")
+print("[1C-导入] 日志分析")
 print("="*60)
 
-print(f"\n[1C-IMPORT] Loading logs found: {len(logs['loading'])}")
+print(f"\n[1C-导入] 找到加载日志: {len(logs['loading'])}")
 if logs['loading']:
-    print(f"  Filepath: {logs['loading'][0]}")
+    print(f"  文件路径: {logs['loading'][0]}")
 else:
-    print("  [!] NO loading log - method not called!")
+    print("  [!] 没有加载日志 - 方法未调用！")
 
-print(f"\n[1C-IMPORT] Loaded logs found: {len(logs['loaded'])}")
+print(f"\n[1C-导入] 找到已加载日志: {len(logs['loaded'])}")
 if logs['loaded']:
-    print(f"  Template name: {logs['loaded'][0]}")
+    print(f"  模板名称: {logs['loaded'][0]}")
 else:
-    print("  [!] NO loaded log - JSON parsing failed!")
+    print("  [!] 没有已加载日志 - JSON 解析失败！")
 
-print(f"\n[1C-IMPORT] Displayed logs found: {len(logs['displayed'])}")
+print(f"\n[1C-导入] 找到显示日志: {len(logs['displayed'])}")
 if logs['displayed']:
-    print(f"  Dialog shown: YES")
+    print(f"  对话框显示: 是")
 else:
-    print("  [!] NO displayed log - dialog not shown!")
+    print("  [!] 没有显示日志 - 对话框未显示！")
 
 if issues:
-    print(f"\nDETECTED {len(issues)} ISSUE(S):")
+    print(f"\n检测到 {len(issues)} 个问题:")
     for issue in issues:
         print(f"  {issue['type']}: {issue['desc']}")
     print("\n" + "="*60)
-    print("[FAILURE] 1C INTEGRATION HAS ISSUES")
+    print("[失败] 1C 集成存在问题")
     print("="*60)
     return 1
 
 print("\n" + "="*60)
-print("[OK] 1C Integration works correctly")
+print("[成功] 1C 集成工作正常")
 print("="*60)
 return 0
 ```
 
-### 3. Додати очищення temp файлу
+### 3. 添加临时文件清理
 
-**В кінці тесту:**
+**在测试结束时：**
 ```python
-# Очищуємо тимчасовий файл
+# 清理临时文件
 if temp_json.exists():
     temp_json.unlink()
-    print(f"\n[TEST] Temp file cleaned: {temp_json}")
+    print(f"\n[测试] 临时文件已清理: {temp_json}")
 ```
 
-### 4. Покращити LogAnalyzer (опціонально)
+### 4. 改进 LogAnalyzer (可选)
 
-**Додати детальніший парсинг:**
+**添加更详细的解析：**
 ```python
 @staticmethod
 def parse_1c_logs(log_content):
-    """Витягти логи [1C-IMPORT]"""
+    """提取 [1C-IMPORT] 日志"""
     logs = {
         'loading': [],
         'loaded': [],
         'displayed': [],
-        'errors': []  # ← НОВИЙ: помилки
+        'errors': []  # ← 新增：错误
     }
     
     for line in log_content.split('\n'):
-        if '[1C-IMPORT] Loading template from:' in line:
-            match = re.search(r'from: (.+)$', line)
+        if '[1C-IMPORT] 正在从文件加载模板:' in line:
+            match = re.search(r'从文件加载模板: (.+)$', line)
             if match:
                 logs['loading'].append(match.group(1))
         
-        if '[1C-IMPORT] JSON loaded:' in line:
-            match = re.search(r'loaded: (.+)$', line)
+        if '[1C-IMPORT] JSON 已加载:' in line:
+            match = re.search(r'已加载: (.+)$', line)
             if match:
                 logs['loaded'].append(match.group(1))
         
-        if '[1C-IMPORT] Template displayed successfully' in line:
+        if '[1C-IMPORT] 模板显示成功' in line:
             logs['displayed'].append(True)
         
-        # ← НОВИЙ: ловимо помилки
-        if '[1C-IMPORT] Failed to load:' in line:
-            match = re.search(r'load: (.+)$', line)
+        # ← 新增：捕获错误
+        if '[1C-IMPORT] 加载失败:' in line:
+            match = re.search(r'失败: (.+)$', line)
             if match:
                 logs['errors'].append(match.group(1))
     
@@ -322,18 +322,18 @@ def parse_1c_logs(log_content):
 
 ---
 
-## 📋 ПОВНИЙ ВИПРАВЛЕНИЙ КОД
+## 📋 完整修复代码
 
 ```python
 # -*- coding: utf-8 -*-
-"""Умний тест: Завантаження шаблону з 1С JSON"""
+"""智能测试：从 1C JSON 加载模板"""
 
 import sys
 import re
 import json
 from pathlib import Path
 
-# Додаємо корінь проекту
+# 添加项目根目录
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -343,11 +343,11 @@ from utils.logger import logger
 
 
 class Load1CLogAnalyzer:
-    """Аналізатор логів завантаження з 1С"""
+    """1C 加载日志分析器"""
     
     @staticmethod
     def parse_1c_logs(log_content):
-        """Витягти логи [1C-IMPORT]"""
+        """提取 [1C-导入] 日志"""
         logs = {
             'loading': [],
             'loaded': [],
@@ -356,21 +356,21 @@ class Load1CLogAnalyzer:
         }
         
         for line in log_content.split('\n'):
-            if '[1C-IMPORT] Loading template from:' in line:
-                match = re.search(r'from: (.+)$', line)
+            if '[1C-导入] 正在从文件加载模板:' in line:
+                match = re.search(r'从文件加载模板: (.+)$', line)
                 if match:
                     logs['loading'].append(match.group(1))
             
-            if '[1C-IMPORT] JSON loaded:' in line:
-                match = re.search(r'loaded: (.+)$', line)
+            if '[1C-导入] JSON 已加载:' in line:
+                match = re.search(r'已加载: (.+)$', line)
                 if match:
                     logs['loaded'].append(match.group(1))
             
-            if '[1C-IMPORT] Template displayed successfully' in line:
+            if '[1C-导入] 模板显示成功' in line:
                 logs['displayed'].append(True)
             
-            if '[1C-IMPORT] Failed to load:' in line:
-                match = re.search(r'load: (.+)$', line)
+            if '[1C-导入] 加载失败:' in line:
+                match = re.search(r'失败: (.+)$', line)
                 if match:
                     logs['errors'].append(match.group(1))
         
@@ -378,51 +378,51 @@ class Load1CLogAnalyzer:
     
     @staticmethod
     def detect_issues(logs):
-        """Детектувати проблеми"""
+        """检测问题"""
         issues = []
         
-        # Проблема 1: JSON не завантажений
+        # 问题 1: JSON 未加载
         if not logs['loading']:
             issues.append({
-                'type': 'NO_LOADING_LOG',
-                'desc': 'Loading log not found - method not called or file not found'
+                'type': '没有加载日志',
+                'desc': '未找到加载日志 - 方法未调用或文件未找到'
             })
         
-        # Проблема 2: Name не розпізнаний
+        # 问题 2: 名称未识别
         if not logs['loaded']:
             issues.append({
-                'type': 'JSON_NOT_PARSED',
-                'desc': 'JSON loaded log not found - parsing failed'
+                'type': 'JSON 未解析',
+                'desc': '未找到 JSON 加载日志 - 解析失败'
             })
         
-        # Проблема 3: Dialog не показаний
+        # 问题 3: 对话框未显示
         if not logs['displayed']:
             issues.append({
-                'type': 'DIALOG_NOT_SHOWN',
-                'desc': 'Template displayed log not found - dialog not shown'
+                'type': '对话框未显示',
+                'desc': '未找到模板显示日志 - 对话框未显示'
             })
         
-        # Проблема 4: Помилки в логах
+        # 问题 4: 日志中有错误
         if logs['errors']:
             issues.append({
-                'type': 'LOAD_ERROR',
-                'desc': f'Load error found: {logs["errors"][0]}'
+                'type': '加载错误',
+                'desc': f'发现加载错误: {logs["errors"][0]}'
             })
         
         return issues
 
 
 def test_1c_integration_smart():
-    """Умний тест завантаження з 1С"""
+    """1C 集成智能测试"""
     
     print("\n" + "="*60)
-    print("SMART TEST: 1C Integration - Template Loading")
+    print("智能测试: 1C 集成 - 模板加载")
     print("="*60)
     
     log_file = project_root / "logs" / "zpl_designer.log"
     log_file.parent.mkdir(exist_ok=True)
     
-    # ✅ СТВОРЮЄМО ТЕСТОВИЙ JSON
+    # ✅ 创建测试 JSON
     temp_json = project_root / "temp_1c_test.json"
     test_template = {
         "name": "TEST_TEMPLATE_1C",
@@ -436,89 +436,89 @@ def test_1c_integration_smart():
     with open(temp_json, 'w', encoding='utf-8') as f:
         json.dump(test_template, f, indent=2, ensure_ascii=False)
     
-    print(f"[TEST] Test JSON created: {temp_json}")
-    print(f"[TEST] Template name: {test_template['name']}")
-    print(f"[TEST] ZPL length: {len(test_template['zpl'])} chars")
+    print(f"[测试] 测试 JSON 已创建: {temp_json}")
+    print(f"[测试] 模板名称: {test_template['name']}")
+    print(f"[测试] ZPL 长度: {len(test_template['zpl'])} 字符")
     
-    # Розмір файлу ДО тесту
+    # 测试前的文件大小
     file_size_before = log_file.stat().st_size if log_file.exists() else 0
-    print(f"[TEST] Log file size before: {file_size_before} bytes")
+    print(f"[测试] 测试前日志文件大小: {file_size_before} 字节")
     
-    # Запускаємо додаток
+    # 启动应用程序
     app = QApplication.instance() or QApplication(sys.argv)
     
-    print(f"\n[TEST] Starting MainWindow with template_file={temp_json}")
+    print(f"\n[测试] 使用 template_file={temp_json} 启动 MainWindow")
     window = MainWindow(template_file=str(temp_json))
     window.show()
     
-    # КРИТИЧНО: Даємо час на обробку подій
+    # 关键：给事件处理时间
     for _ in range(5):
         app.processEvents()
     
-    print("[TEST] MainWindow shown, events processed")
+    print("[测试] MainWindow 已显示，事件已处理")
     
-    # Закриваємо вікно БЕЗ event loop
+    # 关闭窗口，不使用 event loop
     window.close()
     app.processEvents()
     
-    print("[TEST] Window closed")
+    print("[测试] 窗口已关闭")
     
-    # Читаємо НОВІ логи
+    # 读取新日志
     with open(log_file, 'r', encoding='utf-8') as f:
         f.seek(file_size_before)
         new_logs = f.read()
     
-    print(f"\n[TEST] New log size: {len(new_logs)} chars")
+    print(f"\n[测试] 新日志大小: {len(new_logs)} 字符")
     
-    # Аналізуємо
+    # 分析
     analyzer = Load1CLogAnalyzer()
     logs = analyzer.parse_1c_logs(new_logs)
     issues = analyzer.detect_issues(logs)
     
-    # Вивід
+    # 输出
     print("\n" + "="*60)
-    print("[1C-IMPORT] LOG ANALYSIS")
+    print("[1C-导入] 日志分析")
     print("="*60)
     
-    print(f"\n[1C-IMPORT] Loading logs found: {len(logs['loading'])}")
+    print(f"\n[1C-导入] 找到加载日志: {len(logs['loading'])}")
     if logs['loading']:
-        print(f"  Filepath: {logs['loading'][0]}")
+        print(f"  文件路径: {logs['loading'][0]}")
     else:
-        print("  [!] NO loading log - method not called!")
+        print("  [!] 没有加载日志 - 方法未调用！")
     
-    print(f"\n[1C-IMPORT] Loaded logs found: {len(logs['loaded'])}")
+    print(f"\n[1C-导入] 找到已加载日志: {len(logs['loaded'])}")
     if logs['loaded']:
-        print(f"  Template name: {logs['loaded'][0]}")
+        print(f"  模板名称: {logs['loaded'][0]}")
     else:
-        print("  [!] NO loaded log - JSON parsing failed!")
+        print("  [!] 没有已加载日志 - JSON 解析失败！")
     
-    print(f"\n[1C-IMPORT] Displayed logs found: {len(logs['displayed'])}")
+    print(f"\n[1C-导入] 找到显示日志: {len(logs['displayed'])}")
     if logs['displayed']:
-        print(f"  Dialog shown: YES")
+        print(f"  对话框显示: 是")
     else:
-        print("  [!] NO displayed log - dialog not shown!")
+        print("  [!] 没有显示日志 - 对话框未显示！")
     
     if logs['errors']:
-        print(f"\n[1C-IMPORT] Errors found: {len(logs['errors'])}")
+        print(f"\n[1C-导入] 发现错误: {len(logs['errors'])}")
         for error in logs['errors']:
-            print(f"  Error: {error}")
+            print(f"  错误: {error}")
     
-    # Очищуємо тимчасовий файл
+    # 清理临时文件
     if temp_json.exists():
         temp_json.unlink()
-        print(f"\n[TEST] Temp file cleaned: {temp_json}")
+        print(f"\n[测试] 临时文件已清理: {temp_json}")
     
     if issues:
-        print(f"\nDETECTED {len(issues)} ISSUE(S):")
+        print(f"\n检测到 {len(issues)} 个问题:")
         for issue in issues:
             print(f"  {issue['type']}: {issue['desc']}")
         print("\n" + "="*60)
-        print("[FAILURE] 1C INTEGRATION HAS ISSUES")
+        print("[失败] 1C 集成存在问题")
         print("="*60)
         return 1
     
     print("\n" + "="*60)
-    print("[OK] 1C Integration works correctly")
+    print("[成功] 1C 集成工作正常")
     print("="*60)
     return 0
 
@@ -530,97 +530,97 @@ if __name__ == '__main__':
 
 ---
 
-## 🎯 ОЧІКУВАНИЙ РЕЗУЛЬТАТ
+## 🎯 预期结果
 
-### При успішному виконанні:
-
-```
-============================================================
-SMART TEST: 1C Integration - Template Loading
-============================================================
-[TEST] Test JSON created: D:\AiKlientBank\1C_Zebra\temp_1c_test.json
-[TEST] Template name: TEST_TEMPLATE_1C
-[TEST] ZPL length: 64 chars
-[TEST] Log file size before: 15234 bytes
-
-[TEST] Starting MainWindow with template_file=D:\AiKlientBank\1C_Zebra\temp_1c_test.json
-[TEST] MainWindow shown, events processed
-[TEST] Window closed
-
-[TEST] New log size: 457 chars
-
-============================================================
-[1C-IMPORT] LOG ANALYSIS
-============================================================
-
-[1C-IMPORT] Loading logs found: 1
-  Filepath: D:\AiKlientBank\1C_Zebra\temp_1c_test.json
-
-[1C-IMPORT] Loaded logs found: 1
-  Template name: TEST_TEMPLATE_1C
-
-[1C-IMPORT] Displayed logs found: 1
-  Dialog shown: YES
-
-[TEST] Temp file cleaned: D:\AiKlientBank\1C_Zebra\temp_1c_test.json
-
-============================================================
-[OK] 1C Integration works correctly
-============================================================
-```
-
-### При помилці:
+### 成功执行时：
 
 ```
 ============================================================
-[1C-IMPORT] LOG ANALYSIS
+智能测试: 1C 集成 - 模板加载
 ============================================================
+[测试] 测试 JSON 已创建: D:\AiKlientBank\1C_Zebra\temp_1c_test.json
+[测试] 模板名称: TEST_TEMPLATE_1C
+[测试] ZPL 长度: 64 字符
+[测试] 测试前日志文件大小: 15234 字节
 
-[1C-IMPORT] Loading logs found: 0
-  [!] NO loading log - method not called!
+[测试] 使用 template_file=D:\AiKlientBank\1C_Zebra\temp_1c_test.json 启动 MainWindow
+[测试] MainWindow 已显示，事件已处理
+[测试] 窗口已关闭
 
-[1C-IMPORT] Loaded logs found: 0
-  [!] NO loaded log - JSON parsing failed!
-
-[1C-IMPORT] Displayed logs found: 0
-  [!] NO displayed log - dialog not shown!
-
-DETECTED 3 ISSUE(S):
-  NO_LOADING_LOG: Loading log not found - method not called or file not found
-  JSON_NOT_PARSED: JSON loaded log not found - parsing failed
-  DIALOG_NOT_SHOWN: Template displayed log not found - dialog not shown
+[测试] 新日志大小: 457 字符
 
 ============================================================
-[FAILURE] 1C INTEGRATION HAS ISSUES
+[1C-导入] 日志分析
+============================================================
+
+[1C-导入] 找到加载日志: 1
+  文件路径: D:\AiKlientBank\1C_Zebra\temp_1c_test.json
+
+[1C-导入] 找到已加载日志: 1
+  模板名称: TEST_TEMPLATE_1C
+
+[1C-导入] 找到显示日志: 1
+  对话框显示: 是
+
+[测试] 临时文件已清理: D:\AiKlientBank\1C_Zebra\temp_1c_test.json
+
+============================================================
+[成功] 1C 集成工作正常
+============================================================
+```
+
+### 出错时：
+
+```
+============================================================
+[1C-导入] 日志分析
+============================================================
+
+[1C-导入] 找到加载日志: 0
+  [!] 没有加载日志 - 方法未调用！
+
+[1C-导入] 找到已加载日志: 0
+  [!] 没有已加载日志 - JSON 解析失败！
+
+[1C-导入] 找到显示日志: 0
+  [!] 没有显示日志 - 对话框未显示！
+
+检测到 3 个问题:
+  没有加载日志: 未找到加载日志 - 方法未调用或文件未找到
+  JSON 未解析: 未找到 JSON 加载日志 - 解析失败
+  对话框未显示: 未找到模板显示日志 - 对话框未显示
+
+============================================================
+[失败] 1C 集成存在问题
 ============================================================
 ```
 
 ---
 
-## ✅ ЧЕКЛИСТ ВИПРАВЛЕНЬ
+## ✅ 修复检查清单
 
-- [ ] Створити temp_1c_test.json ПЕРЕД тестом
-- [ ] Додати JSON структуру з name, zpl, variables
-- [ ] Покращити вивід результатів (детальний як у cursor test)
-- [ ] Додати парсинг помилок в LogAnalyzer
-- [ ] Додати очищення temp файлу в кінці
-- [ ] Зберегти file_size_before логіку (НЕ видаляти файл!)
-- [ ] Додати детальні print з числами та статусами
-- [ ] Перевірити що логи [1C-IMPORT] з'являються
-
----
-
-## 🔑 КЛЮЧОВІ ПРИНЦИПИ
-
-1. **ЗАВЖДИ створюй тестові файли** - НЕ покладайся на існуючі
-2. **file_size_before, НЕ видаляти логи** - зберігай історію
-3. **Детальний вивід з ЧИСЛАМИ** - не просто len(), а `{len(logs)}` з описом
-4. **LogAnalyzer детектує КІЛЬКА проблем** - мінімум 3-4 типи
-5. **Очищуй за собою** - видаляй тимчасові файли
+- [ ] 在测试前创建 temp_1c_test.json
+- [ ] 添加带 name, zpl, variables 的 JSON 结构
+- [ ] 改进结果输出 (像光标测试一样详细)
+- [ ] 在 LogAnalyzer 中添加错误解析
+- [ ] 在结束时添加临时文件清理
+- [ ] 保留 file_size_before 逻辑 (不删除文件！)
+- [ ] 添加带数字和状态的详细 print
+- [ ] 验证 [1C-导入] 日志出现
 
 ---
 
-**Версія:** 1.0  
-**Дата:** 2025-01-08  
-**Автор:** Senior AI Assistant  
-**Мова:** Українська (правило userPreferences)
+## 🔑 关键原则
+
+1. **始终创建测试文件** - 不要依赖现有文件
+2. **使用 file_size_before，不删除日志** - 保留历史
+3. **带数字的详细输出** - 不只是 len()，而是带描述的 `{len(logs)}`
+4. **LogAnalyzer 检测多个问题** - 最少 3-4 种类型
+5. **清理自己的文件** - 删除临时文件
+
+---
+
+**版本：** 1.0  
+**日期：** 2025-01-08  
+**作者：** 资深 AI 助手  
+**语言：** 中文 (userPreferences 规则)

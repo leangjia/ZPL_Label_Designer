@@ -1,147 +1,147 @@
-# УМНОЕ ТЕСТИРОВАНИЕ CANVAS/GUI
+# 画布/GUI智能测试
 
-## Проблема с обычными тестами
+## 传统测试的问题
 
-**Обычные тесты НЕ ВИДЯТ внутренних проблем:**
+**传统测试看不到内部问题：**
 ```python
-# Тест проверяет только финальный результат
-assert element.config.x == 6.0  # PASSED ✓
+# 测试只检查最终结果
+assert element.config.x == 6.0  # 通过 ✓
 
-# НО НЕ ВИДИТ что внутри snap НЕ работал!
-# Логи показывают:
-#   [SNAP] 6.55mm -> 6.6mm  (во время drag)
+# 但看不到内部吸附功能没工作！
+# 日志显示：
+#   [SNAP] 6.55mm -> 6.6mm  (拖拽期间)
 #   [FINAL-POS] Before: 6.55mm
-#   [FINAL-POS] After: 6.55mm  ← НЕ СНЕПНУЛО!
+#   [FINAL-POS] After: 6.55mm  ← 未吸附！
 #   [FINAL-POS] Saved: 6.55mm
 ```
 
-## Решение: Анализ логов
+## 解决方案：日志分析
 
-**Умный тест анализирует логи и детектирует:**
+**智能测试分析日志并检测：**
 
-1. **SNAP_FINAL_MISMATCH** - последний [SNAP] не совпадает с [FINAL-POS After]
+1. **SNAP_FINAL_MISMATCH** - 最后的[SNAP]与[FINAL-POS After]不匹配
    ```
-   [SNAP] 6.55mm -> 6.0mm  (показал что снепнуло)
-   [FINAL-POS] After: 6.55mm  (но НЕ снепнуло!)
+   [SNAP] 6.55mm -> 6.0mm  (显示已吸附)
+   [FINAL-POS] After: 6.55mm  (但未吸附！)
    ```
 
 2. **NO_SNAP_IN_FINAL** - [FINAL-POS Before] == [FINAL-POS After]
    ```
    [FINAL-POS] Before: 6.55mm
-   [FINAL-POS] After: 6.55mm  (snap НЕ применился!)
+   [FINAL-POS] After: 6.55mm  (吸附未生效！)
    ```
 
 3. **FINAL_SAVED_MISMATCH** - [FINAL-POS After] != [FINAL-POS Saved]
    ```
    [FINAL-POS] After: 6.0mm
-   [FINAL-POS] Saved: 6.55mm  (сохранили неснепленное!)
+   [FINAL-POS] Saved: 6.55mm  (保存了未吸附的值！)
    ```
 
-## Структура умного теста
+## 智能测试结构
 
 ```python
 class LogAnalyzer:
-    """Анализирует логи на проблемы"""
+    """分析日志中的问题"""
     
     @staticmethod
     def parse_snap_logs(log_content):
-        """Извлечь все [SNAP] записи"""
+        """提取所有[SNAP]记录"""
         pattern = r'\[SNAP\] ([\d.]+)mm, ([\d.]+)mm -> ([\d.]+)mm, ([\d.]+)mm'
-        # Возвращает: [(from_x, from_y, to_x, to_y), ...]
+        # 返回: [(from_x, from_y, to_x, to_y), ...]
     
     @staticmethod
     def parse_final_pos_logs(log_content):
-        """Извлечь все [FINAL-POS] записи"""
-        # Возвращает: {'before': [...], 'after': [...], 'saved': [...]}
+        """提取所有[FINAL-POS]记录"""
+        # 返回: {'before': [...], 'after': [...], 'saved': [...]}
     
     @staticmethod
     def detect_snap_issues(snap_logs, final_logs):
-        """Детектировать проблемы"""
-        # Проверка 1: SNAP vs FINAL-POS After
-        # Проверка 2: FINAL-POS Before vs After
-        # Проверка 3: FINAL-POS After vs Saved
+        """检测问题"""
+        # 检查1: SNAP vs FINAL-POS After
+        # 检查2: FINAL-POS Before vs After
+        # 检查3: FINAL-POS After vs Saved
 ```
 
-## Алгоритм тестирования
+## 测试算法
 
-1. **Запомнить размер лог-файла ДО теста**
-2. **Выполнить действие** (например, перетащить элемент)
-3. **Прочитать НОВЫЕ логи** (от запомненной позиции)
-4. **Распарсить логи** (найти [SNAP], [FINAL-POS])
-5. **Детектировать проблемы** (несоответствия)
-6. **Вывести детальный отчет**
+1. **记录测试前的日志文件大小**
+2. **执行操作**（例如拖拽元素）
+3. **读取新日志**（从记录的位置开始）
+4. **解析日志**（查找[SNAP], [FINAL-POS]）
+5. **检测问题**（不匹配情况）
+6. **输出详细报告**
 
-## Пример использования
+## 使用示例
 
 ```python
 def test_snap_with_log_analysis():
     log_file = Path('logs/zpl_designer.log')
     file_size_before = log_file.stat().st_size
     
-    # Выполнить действие
+    # 执行操作
     item.setPos(QPointF(x, y))
     app.processEvents()
     
-    # Прочитать новые логи
+    # 读取新日志
     with open(log_file, 'r', encoding='utf-8') as f:
         f.seek(file_size_before)
         new_logs = f.read()
     
-    # Анализировать
+    # 分析
     analyzer = LogAnalyzer()
     snap_logs = analyzer.parse_snap_logs(new_logs)
     final_logs = analyzer.parse_final_pos_logs(new_logs)
     issues = analyzer.detect_snap_issues(snap_logs, final_logs)
     
-    # Проверить
+    # 检查
     if issues:
         for issue in issues:
             print(f"[!] {issue['type']}: {issue['desc']}")
-        return 1  # FAIL
+        return 1  # 失败
     
-    return 0  # SUCCESS
+    return 0  # 成功
 ```
 
-## Преимущества
+## 优势
 
-✅ **Детектирует внутренние проблемы** - видит что происходит внутри логики
-✅ **Не зависит от финального результата** - может найти баг даже если результат случайно правильный
-✅ **Детальная диагностика** - показывает ЧТО именно сломано
-✅ **Предотвращает регрессии** - поймает если кто-то сломает snap
+✅ **检测内部问题** - 能看到逻辑内部发生的情况
+✅ **不依赖最终结果** - 即使结果偶然正确也能发现bug
+✅ **详细诊断** - 显示具体哪里出了问题
+✅ **防止回归** - 如果有人破坏了吸附功能能够捕获
 
-## Примеры детекции
+## 检测示例
 
-### Пример 1: Threshold слишком мал (старый баг)
+### 示例1：阈值太小（旧bug）
 ```
-DETECTED 1 ISSUE(S):
+检测到 1 个问题：
 1. NO_SNAP_IN_FINAL
-   FINAL-POS Before=6.55mm, After=6.55mm (не снепнуло!)
-   threshold=0.5 слишком мал для distance=0.55
+   FINAL-POS Before=6.55mm, After=6.55mm (未吸附！)
+   threshold=0.5 对于 distance=0.55 太小
 ```
 
-### Пример 2: Snap в ItemPositionHasChanged не работает
+### 示例2：ItemPositionHasChanged中的吸附不工作
 ```
-DETECTED 1 ISSUE(S):
+检测到 1 个问题：
 1. SNAP_FINAL_MISMATCH
-   SNAP показал 6.0mm, но FINAL-POS After = 6.55mm
-   Snap применился в ItemPositionChange, но НЕ в ItemPositionHasChanged
+   SNAP显示 6.0mm, 但 FINAL-POS After = 6.55mm
+   Snap在ItemPositionChange中生效，但在ItemPositionHasChanged中未生效
 ```
 
-## Файлы
+## 文件
 
-- `tests/test_snap_smart_v2.py` - умный тест с анализом логов
-- `tests/run_snap_smart_v2_test.py` - runner для умного теста
+- `tests/test_snap_smart_v2.py` - 带日志分析的智能测试
+- `tests/run_snap_smart_v2_test.py` - 智能测试运行器
 
-## Когда использовать
+## 使用时机
 
-**ВСЕГДА** для Canvas/GUI функций где важна внутренняя логика:
-- Snap to grid
-- Zoom
-- Drag & drop
-- Coordinate transformations
-- Любая логика с промежуточными состояниями
+**始终**用于重要的Canvas/GUI功能内部逻辑：
+- 网格吸附
+- 缩放
+- 拖放
+- 坐标转换
+- 任何有中间状态的逻辑
 
-**НЕ нужно** для простых функций без логов:
-- Математические расчеты
-- Простые геттеры/сеттеры
-- Статические методы
+**不需要**用于没有日志的简单功能：
+- 数学计算
+- 简单的getter/setter
+- 静态方法

@@ -1,270 +1,270 @@
-# Руководство по диагностике проблем через логи
+# 通过日志诊断问题指南
 
-## Введение
+## 简介
 
-Система логирования 1C_Zebra создана для детальной диагностики проблем. Каждый процесс логируется с полной информацией, что позволяет точно определить источник проблемы.
+1C_Zebra 的日志系统旨在进行详细的问题诊断。每个过程都记录了完整信息，可以准确定位问题来源。
 
-## Уровни логирования
+## 日志级别
 
-По умолчанию активирован **DEBUG** режим:
+默认激活 **DEBUG** 模式：
 ```python
-# config.py
-LOG_LEVEL = "DEBUG"           # Всё в файл
-CONSOLE_LOG_LEVEL = "DEBUG"   # Всё в консоль
+// config.py
+LOG_LEVEL = "DEBUG"           // 所有内容到文件
+CONSOLE_LOG_LEVEL = "DEBUG"   // 所有内容到控制台
 ```
 
-Это означает максимальную детализацию при диагностике.
+这意味着在诊断时具有最大详细程度。
 
-## Структура логов при Preview
+## Preview 时的日志结构
 
-При нажатии кнопки "Preview" логируется полная цепочка:
+点击 "Preview" 按钮时记录完整链：
 
-### 1. Инициация запроса (MainWindow)
-
-```
-============================================================
-PREVIEW REQUEST INITIATED
-============================================================
-[INFO] Elements count: 1
-[INFO] Element 1: type=TextElement, text='New Text', font_size=25, position=(9.9, 9.9)
-[INFO] Label config: {'width': 28, 'height': 28, 'dpi': 203}
-[INFO] No placeholders, using actual text values
-[INFO] Generating ZPL code...
-```
-
-**Что проверять:**
-- ✅ Количество элементов соответствует тому что на canvas
-- ✅ Координаты элементов корректные
-- ✅ Label config правильный (28x28mm, DPI 203)
-
-### 2. Генерация ZPL (ZPLGenerator)
+### 1. 请求初始化 (MainWindow)
 
 ```
 ============================================================
-ZPL GENERATION STARTED
+预览请求已启动
 ============================================================
-[INFO] Elements count: 1
-[INFO] Label config: {'width': 28, 'height': 28, 'dpi': 203}
-[DEBUG] Added: ^XA (start of label)
-[DEBUG] Added: ^CI28 (UTF-8 encoding)
-[INFO] Label width: 28mm = 223 dots (^PW223)
-[INFO] Label height: 28mm = 223 dots (^LL223)
-[INFO] Processing element 1/1: TextElement
-[DEBUG]   Text: 'New Text'
-[DEBUG]   Font size: 25
-[DEBUG]   Position: (9.90mm, 9.90mm)
-[DEBUG]   Generated ZPL: ^FO79,79^A0N,25,25^FDNew Text^FS
-[DEBUG] Added: ^XZ (end of label)
-[INFO] ZPL generation completed: 67 bytes, 7 lines
+[INFO] 元素数量: 1
+[INFO] 元素 1: 类型=TextElement, 文本='新文本', 字体大小=25, 位置=(9.9, 9.9)
+[INFO] 标签配置: {'width': 28, 'height': 28, 'dpi': 203}
+[INFO] 无占位符，使用实际文本值
+[INFO] 生成 ZPL 代码...
+```
+
+**检查内容：**
+- ✅ 元素数量与 canvas 上的一致
+- ✅ 元素坐标正确
+- ✅ 标签配置正确 (28x28mm, DPI 203)
+
+### 2. ZPL 生成 (ZPLGenerator)
+
+```
+============================================================
+ZPL 生成开始
+============================================================
+[INFO] 元素数量: 1
+[INFO] 标签配置: {'width': 28, 'height': 28, 'dpi': 203}
+[DEBUG] 添加: ^XA (标签开始)
+[DEBUG] 添加: ^CI28 (UTF-8 编码)
+[INFO] 标签宽度: 28mm = 223 点 (^PW223)
+[INFO] 标签高度: 28mm = 223 点 (^LL223)
+[INFO] 处理元素 1/1: TextElement
+[DEBUG]   文本: '新文本'
+[DEBUG]   字体大小: 25
+[DEBUG]   位置: (9.90mm, 9.90mm)
+[DEBUG]   生成的 ZPL: ^FO79,79^A0N,25,25^FD新文本^FS
+[DEBUG] 添加: ^XZ (标签结束)
+[INFO] ZPL 生成完成: 67 字节, 7 行
 ============================================================
 ```
 
-**Что проверять:**
-- ✅ Конвертация mm -> dots правильная (28mm = 223 dots при 203 DPI)
-- ✅ Позиция элемента правильная (^FO79,79)
-- ✅ Команды ZPL корректные (^A0N для шрифта, ^FD для данных)
+**检查内容：**
+- ✅ mm -> 点转换正确 (28mm = 223 dots 在 203 DPI)
+- ✅ 元素位置正确 (^FO79,79)
+- ✅ ZPL 命令正确 (^A0N 用于字体, ^FD 用于数据)
 
-**Формулы проверки:**
+**验证公式：**
 ```
 dots = mm * DPI / 25.4
 223 = 28 * 203 / 25.4 ✓
 79 = 9.9 * 203 / 25.4 ✓
 ```
 
-### 3. Финальный ZPL код (DEBUG режим)
+### 3. 最终 ZPL 代码 (DEBUG 模式)
 
 ```
 ============================================================
-GENERATED ZPL CODE:
+生成的 ZPL 代码:
 ============================================================
 [DEBUG] ^XA
 [DEBUG] ^CI28
 [DEBUG] ^PW223
 [DEBUG] ^LL223
-[DEBUG] ^FO79,79^A0N,25,25^FDNew Text^FS
+[DEBUG] ^FO79,79^A0N,25,25^FD新文本^FS
 [DEBUG] ^XZ
 ============================================================
 ```
 
-**Что проверять:**
-- ✅ Начинается с ^XA, заканчивается ^XZ
-- ✅ Есть ^CI28 для поддержки UTF-8
-- ✅ Команды не разорваны (каждая команда на своей строке или слитно)
+**检查内容：**
+- ✅ 以 ^XA 开始，以 ^XZ 结束
+- ✅ 有 ^CI28 支持 UTF-8
+- ✅ 命令未中断 (每个命令在自己的行或连续)
 
-### 4. Запрос к Labelary API (LabelaryClient)
+### 4. Labelary API 请求 (LabelaryClient)
 
 ```
 ============================================================
-LABELARY PREVIEW REQUEST
+LABELARY 预览请求
 ============================================================
-[INFO] Input dimensions: 28mm x 28mm
-[INFO] Converted to inches: 1.10 x 1.10
+[INFO] 输入尺寸: 28mm x 28mm
+[INFO] 转换为英寸: 1.10 x 1.10
 [INFO] DPI: 203 -> dpmm: 8
 [INFO] API URL: http://api.labelary.com/v1/printers/8dpmm/labels/1.10x1.10/0/
-[INFO] ZPL code length: 67 bytes
-[DEBUG] ZPL code content:
+[INFO] ZPL 代码长度: 67 字节
+[DEBUG] ZPL 代码内容:
 [DEBUG] ----------------------------------------
 [DEBUG] ^XA
 [DEBUG] ^CI28
 [DEBUG] ^PW223
 [DEBUG] ^LL223
-[DEBUG] ^FO79,79^A0N,25,25^FDNew Text^FS
+[DEBUG] ^FO79,79^A0N,25,25^FD新文本^FS
 [DEBUG] ^XZ
 [DEBUG] ----------------------------------------
-[INFO] Request headers: {'Accept': 'image/png'}
-[INFO] Sending POST request to Labelary API...
+[INFO] 请求头: {'Accept': 'image/png'}
+[INFO] 发送 POST 请求到 Labelary API...
 ```
 
-**Что проверять:**
-- ✅ Конвертация в дюймы: 28mm / 25.4 = 1.10 inch ✓
-- ✅ dpmm правильный: 203 / 25.4 = 8 ✓
-- ✅ URL сформирован правильно
-- ✅ ZPL код совпадает с сгенерированным
+**检查内容：**
+- ✅ 转换为英寸: 28mm / 25.4 = 1.10 inch ✓
+- ✅ dpmm 正确: 203 / 25.4 = 8 ✓
+- ✅ URL 格式正确
+- ✅ ZPL 代码与生成的匹配
 
-### 5. Ответ от API
+### 5. API 响应
 
-#### Успешный ответ (200):
+#### 成功响应 (200):
 
 ```
-[INFO] Response status code: 200
-[INFO] Response headers: {'Content-Type': 'image/png', ...}
-[INFO] Response content length: 1523 bytes
-[INFO] Preview generated successfully [+]
+[INFO] 响应状态码: 200
+[INFO] 响应头: {'Content-Type': 'image/png', ...}
+[INFO] 响应内容长度: 1523 字节
+[INFO] 预览生成成功 [+]
 ============================================================
 ```
 
-#### Ошибка (400):
+#### 错误 (400):
 
 ```
-[ERROR] Labelary API returned error code: 400
-[ERROR] Response content type: text/plain
-[ERROR] Response body length: 156 bytes
-[ERROR] Response body:
+[ERROR] Labelary API 返回错误代码: 400
+[ERROR] 响应内容类型: text/plain
+[ERROR] 响应体长度: 156 字节
+[ERROR] 响应体:
 [ERROR] ----------------------------------------
-[ERROR] ZPL Error: Invalid command ^A0N,25,25
-[ERROR] Expected format: ^A0N,height,width
+[ERROR] ZPL 错误: 无效命令 ^A0N,25,25
+[ERROR] 预期格式: ^A0N,height,width
 [ERROR] ----------------------------------------
 ============================================================
 ```
 
-**Что проверять при 400:**
-- ❌ Текст ошибки от Labelary - что именно не так
-- ❌ Формат команды ZPL - соответствует ли спецификации
-- ❌ Кодировка данных - нет ли невалидных символов
+**400 错误时检查：**
+- ❌ Labelary 的错误文本 - 具体问题
+- ❌ ZPL 命令格式 - 是否符合规范
+- ❌ 数据编码 - 是否有无效字符
 
-## Типичные проблемы и их диагностика
+## 典型问题及其诊断
 
-### Проблема 1: Ошибка 400 - Invalid ZPL command
+### 问题 1: 错误 400 - 无效 ZPL 命令
 
-**Логи покажут:**
+**日志显示：**
 ```
-[ERROR] Response body:
-[ERROR] ZPL Error: Invalid command ^A0N,25,25
-```
-
-**Причина:** Неправильный формат команды ZPL
-
-**Решение:**
-1. Проверить спецификацию команды на zebra.com
-2. Исправить формат в `core/elements/text_element.py`
-3. Проверить, что параметры команды в правильном порядке
-
-### Проблема 2: Элемент не виден на preview
-
-**Логи покажут:**
-```
-[DEBUG]   Position: (0.50mm, 0.50mm)
-[DEBUG]   Generated ZPL: ^FO4,4^A0N,25,25^FDText^FS
+[ERROR] 响应体:
+[ERROR] ZPL 错误: 无效命令 ^A0N,25,25
 ```
 
-**Причина:** Элемент слишком близко к краю (за полем печати)
+**原因：** ZPL 命令格式不正确
 
-**Решение:** Минимальная позиция должна быть ~2-3mm от края
+**解决方案：**
+1. 在 zebra.com 检查命令规范
+2. 在 `core/elements/text_element.py` 中修复格式
+3. 检查命令参数顺序是否正确
 
-### Проблема 3: Кодировка кириллицы
+### 问题 2: 元素在预览中不可见
 
-**Логи покажут:**
+**日志显示：**
+```
+[DEBUG]   位置: (0.50mm, 0.50mm)
+[DEBUG]   生成的 ZPL: ^FO4,4^A0N,25,25^FD文本^FS
+```
+
+**原因：** 元素太靠近边缘 (在打印区域外)
+
+**解决方案：** 最小位置应距边缘约 2-3mm
+
+### 问题 3: 西里尔字符编码
+
+**日志显示：**
 ```
 [DEBUG] ^CI28
 [DEBUG] ^FDПривет^FS
 ```
 
-**Проверка:** 
-- ✅ Есть команда ^CI28 перед текстом
-- ✅ Текст в UTF-8
+**检查：** 
+- ✅ 文本前有 ^CI28 命令
+- ✅ 文本为 UTF-8 编码
 
-### Проблема 4: Неправильный размер этикетки
+### 问题 4: 标签尺寸不正确
 
-**Логи покажут:**
+**日志显示：**
 ```
 [INFO] API URL: http://api.labelary.com/v1/printers/8dpmm/labels/0.50x0.50/0/
-[ERROR] Labelary API returned error code: 400
-[ERROR] Response body: Label size too small
+[ERROR] Labelary API 返回错误代码: 400
+[ERROR] 响应体: 标签尺寸太小
 ```
 
-**Причина:** Минимальный размер этикетки в Labelary - 1x1 дюйм (~25x25mm)
+**原因：** Labelary 中最小标签尺寸为 1x1 英寸 (~25x25mm)
 
-### Проблема 5: Timeout
+### 问题 5: 超时
 
-**Логи покажут:**
+**日志显示：**
 ```
-[ERROR] Request timeout (>10 seconds)
+[ERROR] 请求超时 (>10 秒)
 ```
 
-**Причина:** Проблемы с сетью или Labelary API недоступен
+**原因：** 网络问题或 Labelary API 不可用
 
-**Решение:** Проверить интернет соединение
+**解决方案：** 检查互联网连接
 
-## Полный пример успешного Preview
+## 完整成功 Preview 示例
 
 ```
 ============================================================
-PREVIEW REQUEST INITIATED
+预览请求已启动
 ============================================================
-[INFO] Elements count: 1
-[INFO] Element 1: type=TextElement, text='Hello', font_size=30, position=(10.0, 10.0)
-[INFO] Label config: {'width': 28, 'height': 28, 'dpi': 203}
-[INFO] No placeholders, using actual text values
-[INFO] Generating ZPL code...
+[INFO] 元素数量: 1
+[INFO] 元素 1: 类型=TextElement, 文本='Hello', 字体大小=30, 位置=(10.0, 10.0)
+[INFO] 标签配置: {'width': 28, 'height': 28, 'dpi': 203}
+[INFO] 无占位符，使用实际文本值
+[INFO] 生成 ZPL 代码...
 
 ============================================================
-ZPL GENERATION STARTED
+ZPL 生成开始
 ============================================================
-[INFO] Elements count: 1
-[INFO] Label config: {'width': 28, 'height': 28, 'dpi': 203}
-[INFO] Label width: 28mm = 223 dots (^PW223)
-[INFO] Label height: 28mm = 223 dots (^LL223)
-[INFO] Processing element 1/1: TextElement
-[DEBUG]   Text: 'Hello'
-[DEBUG]   Font size: 30
-[DEBUG]   Position: (10.00mm, 10.00mm)
-[DEBUG]   Generated ZPL: ^FO80,80^A0N,30,30^FDHello^FS
-[INFO] ZPL generation completed: 65 bytes, 7 lines
+[INFO] 元素数量: 1
+[INFO] 标签配置: {'width': 28, 'height': 28, 'dpi': 203}
+[INFO] 标签宽度: 28mm = 223 点 (^PW223)
+[INFO] 标签高度: 28mm = 223 点 (^LL223)
+[INFO] 处理元素 1/1: TextElement
+[DEBUG]   文本: 'Hello'
+[DEBUG]   字体大小: 30
+[DEBUG]   位置: (10.00mm, 10.00mm)
+[DEBUG]   生成的 ZPL: ^FO80,80^A0N,30,30^FDHello^FS
+[INFO] ZPL 生成完成: 65 字节, 7 行
 ============================================================
 
 ============================================================
-LABELARY PREVIEW REQUEST
+LABELARY 预览请求
 ============================================================
-[INFO] Input dimensions: 28mm x 28mm
-[INFO] Converted to inches: 1.10 x 1.10
+[INFO] 输入尺寸: 28mm x 28mm
+[INFO] 转换为英寸: 1.10 x 1.10
 [INFO] DPI: 203 -> dpmm: 8
 [INFO] API URL: http://api.labelary.com/v1/printers/8dpmm/labels/1.10x1.10/0/
-[INFO] ZPL code length: 65 bytes
-[INFO] Sending POST request to Labelary API...
-[INFO] Response status code: 200
-[INFO] Response content length: 1842 bytes
-[INFO] Preview generated successfully [+]
+[INFO] ZPL 代码长度: 65 字节
+[INFO] 发送 POST 请求到 Labelary API...
+[INFO] 响应状态码: 200
+[INFO] 响应内容长度: 1842 字节
+[INFO] 预览生成成功 [+]
 ============================================================
 
-[INFO] Preview image received, displaying dialog
-[INFO] Image size: 223x223px
-[INFO] Preview dialog closed
+[INFO] 收到预览图像，显示对话框
+[INFO] 图像尺寸: 223x223px
+[INFO] 预览对话框已关闭
 ============================================================
 ```
 
-## Как использовать логи для отладки
+## 如何使用日志进行调试
 
-### 1. Воспроизвести проблему
+### 1. 重现问题
 
 ```bash
 cd D:\AiKlientBank\1C_Zebra
@@ -272,110 +272,110 @@ cd D:\AiKlientBank\1C_Zebra
 python main.py
 ```
 
-Выполнить действия до ошибки.
+执行操作直到出现错误。
 
-### 2. Открыть лог-файл
+### 2. 打开日志文件
 
 ```bash
 type logs\zpl_designer.log
 ```
 
-или
+或
 
 ```powershell
 notepad logs\zpl_designer.log
 ```
 
-### 3. Найти секцию с ошибкой
+### 3. 查找错误部分
 
-Искать по ключевым словам:
-- `ERROR` - ошибки
-- `PREVIEW REQUEST` - начало процесса preview
-- `LABELARY PREVIEW REQUEST` - запрос к API
-- `Response status code: 400` - ошибка API
+搜索关键词：
+- `ERROR` - 错误
+- `PREVIEW REQUEST` - preview 过程开始
+- `LABELARY PREVIEW REQUEST` - API 请求
+- `Response status code: 400` - API 错误
 
-### 4. Анализировать последовательность
+### 4. 分析序列
 
-Читать логи последовательно от `PREVIEW REQUEST INITIATED` до ошибки:
-1. Проверить элементы
-2. Проверить ZPL генерацию
-3. Проверить URL и параметры API
-4. Читать текст ошибки от Labelary
+按顺序从 `PREVIEW REQUEST INITIATED` 到错误阅读日志：
+1. 检查元素
+2. 检查 ZPL 生成
+3. 检查 URL 和 API 参数
+4. 阅读 Labelary 的错误文本
 
-### 5. Сравнить с рабочим примером
+### 5. 与工作示例比较
 
-Сравнить свой лог с примером выше - где отличие?
+将自己的日志与上面的示例比较 - 差异在哪里？
 
-## Настройка детализации логов
+## 配置日志详细程度
 
-### Максимальная детализация (по умолчанию)
+### 最大详细程度 (默认)
 
 ```python
-# config.py
+// config.py
 LOG_LEVEL = "DEBUG"
 CONSOLE_LOG_LEVEL = "DEBUG"
 ```
 
-Показывает **ВСЁ**: каждую строку ZPL, каждую конвертацию, каждый параметр.
+显示 **所有内容**：每行 ZPL、每次转换、每个参数。
 
-### Только ошибки
+### 仅错误
 
 ```python
-# config.py
-LOG_LEVEL = "INFO"           # Всё в файл
-CONSOLE_LOG_LEVEL = "ERROR"  # Только ошибки в консоль
+// config.py
+LOG_LEVEL = "INFO"           // 所有内容到文件
+CONSOLE_LOG_LEVEL = "ERROR"  // 仅错误到控制台
 ```
 
-Тихая работа, но полный лог в файле.
+静默工作，但文件中有完整日志。
 
-### Баланс (рекомендуется после отладки)
+### 平衡 (调试后推荐)
 
 ```python
-# config.py
+// config.py
 LOG_LEVEL = "INFO"
 CONSOLE_LOG_LEVEL = "INFO"
 ```
 
-Основные события без деталей конвертации.
+主要事件，无转换细节。
 
-## Мониторинг в реальном времени
+## 实时监控
 
 ### Windows PowerShell
 
 ```powershell
-# Следить за логом
+// 监控日志
 Get-Content logs\zpl_designer.log -Wait -Tail 50
 ```
 
-### Фильтрация по уровню
+### 按级别过滤
 
 ```powershell
-# Только ошибки
+// 仅错误
 Get-Content logs\zpl_designer.log | Select-String "ERROR"
 
-# Секция preview
+// Preview 部分
 Get-Content logs\zpl_designer.log | Select-String -Context 5 "PREVIEW REQUEST"
 ```
 
-## Отправка логов для помощи
+## 发送日志寻求帮助
 
-При запросе помощи отправляй:
-1. Полный лог-файл `logs/zpl_designer.log`
-2. Скриншот canvas с проблемным элементом
-3. Описание действий до ошибки
+请求帮助时发送：
+1. 完整日志文件 `logs/zpl_designer.log`
+2. 有问题元素的 canvas 截图
+3. 错误前的操作描述
 
-## Заключение
+## 结论
 
-Детальные логи позволяют:
-- ✅ Точно определить на каком этапе ошибка
-- ✅ Увидеть все параметры и преобразования
-- ✅ Понять что именно не так с ZPL кодом
-- ✅ Получить текст ошибки от Labelary API
-- ✅ Быстро исправить проблему
+详细日志允许：
+- ✅ 准确定位错误发生的阶段
+- ✅ 查看所有参数和转换
+- ✅ 了解 ZPL 代码的具体问题
+- ✅ 获取 Labelary API 的错误文本
+- ✅ 快速修复问题
 
-**Помни:** Логи пишутся для того чтобы их читать! Не игнорируй детали в логах - там ответ на вопрос "почему не работает".
+**记住：** 日志是为了阅读而写的！不要忽略日志中的细节 - 那里有"为什么不工作"的答案。
 
 ---
 
-**Версия:** 1.0  
-**Дата:** 2025-10-03
+**版本：** 1.0  
+**日期：** 2025-10-03
